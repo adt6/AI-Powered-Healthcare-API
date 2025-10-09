@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -26,7 +27,7 @@ def seed_data() -> None:
     db = TestingSessionLocal()
     try:
         if db.query(PatientV2).count() == 0:
-            patient = PatientV2(first_name="John", last_name="Doe", birth_date="1990-01-01")
+            patient = PatientV2(first_name="John", last_name="Doe", birth_date=date(1990, 1, 1))
             db.add(patient)
             db.commit()
     finally:

@@ -5,6 +5,17 @@ psycopg2-binary
 pydantic
 python-dotenv
 pytest
+pytest-cov
+
+# Code quality tools
+flake8
+black
+isort
+mypy
+
+# Security tools
+safety
+bandit
 
 # AI Agent dependencies
 langchain
