@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -6,7 +7,7 @@ from app_v2.database import get_db
 from app_v2.models.patient import PatientV2
 from app_v2.schemas.patient import PatientCreate, PatientRead, PatientUpdate
 
-router = APIRouter(prefix="/patients", tags=["patients v2"]) 
+router = APIRouter(prefix="/patients", tags=["patients v2"])
 
 
 @router.get("/", response_model=List[PatientRead])
@@ -37,7 +38,9 @@ def list_patients(
 def get_patient(patient_id: int, db: Session = Depends(get_db)):
     patient = db.query(PatientV2).get(patient_id)
     if not patient:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found"
+        )
     return patient
 
 
@@ -51,10 +54,14 @@ def create_patient(payload: PatientCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{patient_id}", response_model=PatientRead)
-def update_patient(patient_id: int, payload: PatientUpdate, db: Session = Depends(get_db)):
+def update_patient(
+    patient_id: int, payload: PatientUpdate, db: Session = Depends(get_db)
+):
     patient = db.query(PatientV2).get(patient_id)
     if not patient:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found"
+        )
 
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(patient, key, value)
@@ -68,7 +75,9 @@ def update_patient(patient_id: int, payload: PatientUpdate, db: Session = Depend
 def delete_patient(patient_id: int, db: Session = Depends(get_db)):
     patient = db.query(PatientV2).get(patient_id)
     if not patient:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found"
+        )
 
     db.delete(patient)
     db.commit()

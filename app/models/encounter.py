@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, Date, ForeignKey
+from sqlalchemy import Column, Date, ForeignKey, Integer
 from sqlalchemy.orm import relationship
+
 from app.database import Base
+
 
 class Encounter(Base):
     __tablename__ = "encounters"

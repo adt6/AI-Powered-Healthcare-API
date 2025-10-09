@@ -1,10 +1,12 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.organization import OrganizationV2
-from app_v2.schemas.organization import OrganizationCreate, OrganizationRead, OrganizationUpdate
+from app_v2.schemas.organization import (OrganizationCreate, OrganizationRead,
+                                         OrganizationUpdate)
 
 router = APIRouter(prefix="/organizations", tags=["organizations v2"])
 
@@ -22,7 +24,7 @@ def list_organizations(
 ):
     """
     List organizations with filtering options.
-    
+
     - **name**: Filter by organization name (partial match)
     - **type_code**: Filter by organization type (hospital, clinic, etc.)
     - **city**: Filter by city
@@ -30,7 +32,7 @@ def list_organizations(
     - **identifier**: Filter by organization identifier
     """
     query = db.query(OrganizationV2)
-    
+
     if name is not None:
         query = query.filter(OrganizationV2.name.ilike(f"%{name}%"))
     if type_code is not None:
@@ -42,7 +44,9 @@ def list_organizations(
     if identifier is not None:
         query = query.filter(OrganizationV2.identifier == identifier)
 
-    organizations = query.order_by(OrganizationV2.name.asc()).limit(limit).offset(offset).all()
+    organizations = (
+        query.order_by(OrganizationV2.name.asc()).limit(limit).offset(offset).all()
+    )
     return organizations
 
 
@@ -51,7 +55,9 @@ def get_organization(organization_id: int, db: Session = Depends(get_db)):
     """Get a specific organization by ID."""
     organization = db.query(OrganizationV2).get(organization_id)
     if not organization:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
+        )
     return organization
 
 
@@ -66,11 +72,15 @@ def create_organization(payload: OrganizationCreate, db: Session = Depends(get_d
 
 
 @router.put("/{organization_id}", response_model=OrganizationRead)
-def update_organization(organization_id: int, payload: OrganizationUpdate, db: Session = Depends(get_db)):
+def update_organization(
+    organization_id: int, payload: OrganizationUpdate, db: Session = Depends(get_db)
+):
     """Update an existing organization."""
     organization = db.query(OrganizationV2).get(organization_id)
     if not organization:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
+        )
 
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(organization, key, value)
@@ -85,7 +95,9 @@ def delete_organization(organization_id: int, db: Session = Depends(get_db)):
     """Delete an organization."""
     organization = db.query(OrganizationV2).get(organization_id)
     if not organization:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
+        )
 
     db.delete(organization)
     db.commit()

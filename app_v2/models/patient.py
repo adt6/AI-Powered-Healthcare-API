@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, Date, Boolean
+from sqlalchemy import Boolean, Column, Date, Integer, String
+
 from app_v2.database import Base
+
 
 class PatientV2(Base):
     __tablename__ = "patients_v2"

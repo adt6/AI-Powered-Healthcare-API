@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app_v2.database import Base
+
 
 class PractitionerV2(Base):
     __tablename__ = "practitioners_v2"

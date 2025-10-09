@@ -40,5 +40,3 @@ def test_filter_by_patient_id(client):
     assert isinstance(items, list)
     for it in items:
         assert it["patient_id"] == 1
-
-

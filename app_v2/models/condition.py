@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app_v2.database import Base
+
 
 class ConditionV2(Base):
     __tablename__ = "conditions_v2"

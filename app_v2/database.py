@@ -1,11 +1,11 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
 import os
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Use the same DB as in your docker-compose
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres_1:pass@localhost:5432/healthcare_db"
+    "DATABASE_URL", "postgresql://postgres_1:pass@localhost:5432/healthcare_db"
 )
 
 # Create engine and session
@@ -14,6 +14,7 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 # Base class for SQLAlchemy models
 Base = declarative_base()
+
 
 # Dependency for FastAPI routes
 def get_db():

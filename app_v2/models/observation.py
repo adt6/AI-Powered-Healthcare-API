@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app_v2.database import Base
+
 
 class ObservationV2(Base):
     __tablename__ = "observations_v2"
@@ -9,7 +11,7 @@ class ObservationV2(Base):
     patient_id = Column(Integer, ForeignKey("patients_v2.id"), nullable=False)
     encounter_id = Column(Integer, ForeignKey("encounters_v2.id"), nullable=True)
     practitioner_id = Column(Integer, ForeignKey("practitioners_v2.id"), nullable=True)
-    
+
     identifier = Column(String, index=True)
     status = Column(String, nullable=False)
     code = Column(String, nullable=False)
@@ -23,4 +25,4 @@ class ObservationV2(Base):
 
     patient = relationship("PatientV2")
     encounter = relationship("EncounterV2")
-    practitioner = relationship("PractitionerV2") 
+    practitioner = relationship("PractitionerV2")

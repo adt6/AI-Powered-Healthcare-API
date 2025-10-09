@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -8,11 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from app_v2.database import SessionLocal
 from app_v2.models.organization import OrganizationV2
 
+
 # -----------------------------
 # Helpers
 # -----------------------------
 def first_or_none(x):
     return x[0] if isinstance(x, list) and x else None
+
 
 def telecom_value(resource: Dict[str, Any], system: str) -> Optional[str]:
     for t in resource.get("telecom", []) or []:
@@ -20,12 +22,14 @@ def telecom_value(resource: Dict[str, Any], system: str) -> Optional[str]:
             return t.get("value")
     return None
 
+
 def address_fields(resource: Dict[str, Any]):
     addr = first_or_none(resource.get("address", []) or [])
     if not addr:
         return None, None, None, None
     line0 = first_or_none(addr.get("line", []) or [])
     return line0, addr.get("city"), addr.get("state"), addr.get("postalCode")
+
 
 def coding0(resource: Dict[str, Any], *path):
     cur = resource
@@ -43,6 +47,7 @@ def coding0(resource: Dict[str, Any], *path):
         return None, None, None
     return coding.get("system"), coding.get("code"), coding.get("display")
 
+
 def ref_id(ref: Optional[str]) -> Optional[str]:
     if not ref or not isinstance(ref, str):
         return None
@@ -50,6 +55,7 @@ def ref_id(ref: Optional[str]) -> Optional[str]:
     if ref.startswith("urn:uuid:"):
         return ref.split(":")[-1]
     return ref.split("/")[-1]
+
 
 # -----------------------------
 # Upsert one Organization
@@ -107,6 +113,7 @@ def upsert_organization(db, res: Dict[str, Any]):
         db.add(obj)
         # db.flush() not required unless you need obj.id immediately
 
+
 # -----------------------------
 # Import Organizations from a single Bundle
 # -----------------------------
@@ -130,7 +137,9 @@ def import_organizations_from_bundle(bundle_path: Path):
             inserted_or_upserted += 1
 
         db.commit()
-        print(f"[organizations] Upserted {inserted_or_upserted} org(s) from {bundle_path.name}")
+        print(
+            f"[organizations] Upserted {inserted_or_upserted} org(s) from {bundle_path.name}"
+        )
     except IntegrityError as ie:
         db.rollback()
         print(f"[warn] IntegrityError in {bundle_path.name}: {ie}")
@@ -139,6 +148,7 @@ def import_organizations_from_bundle(bundle_path: Path):
         print(f"[error] Failed on {bundle_path.name}: {e}")
     finally:
         db.close()
+
 
 # -----------------------------
 # Entry point: folder or single file
@@ -155,6 +165,7 @@ def import_path(path: Path):
             import_organizations_from_bundle(f)
     else:
         print("Path not found:", path)
+
 
 if __name__ == "__main__":
     # Default: import all bundles from this folder

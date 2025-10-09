@@ -1,13 +1,14 @@
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app_v2.database import SessionLocal
-from app_v2.models.practitioner import PractitionerV2
 from app_v2.models.organization import OrganizationV2
+from app_v2.models.practitioner import PractitionerV2
+
 
 # -----------------------------
 # Helpers
@@ -15,21 +16,23 @@ from app_v2.models.organization import OrganizationV2
 def first_or_none(x):
     return x[0] if isinstance(x, list) and x else None
 
+
 def telecom_value(resource: Dict[str, Any], system: str) -> Optional[str]:
     for t in resource.get("telecom", []) or []:
         if t.get("system") == system:
             return t.get("value")
     return None
 
+
 def name_fields(resource: Dict[str, Any]):
     name = first_or_none(resource.get("name", []) or [])
     if not name:
         return None, None, None
-    
+
     prefix = first_or_none(name.get("prefix", []) or [])
     given = first_or_none(name.get("given", []) or [])
     family = name.get("family")
-    
+
     # Combine prefix, given, and family into full name
     name_parts = []
     if prefix:
@@ -38,9 +41,10 @@ def name_fields(resource: Dict[str, Any]):
         name_parts.append(given)
     if family:
         name_parts.append(family)
-    
+
     full_name = " ".join(name_parts) if name_parts else None
     return full_name, given, family
+
 
 def coding0(resource: Dict[str, Any], *path):
     cur = resource
@@ -58,6 +62,7 @@ def coding0(resource: Dict[str, Any], *path):
         return None, None, None
     return coding.get("system"), coding.get("code"), coding.get("display")
 
+
 def ref_id(ref: Optional[str]) -> Optional[str]:
     if not ref or not isinstance(ref, str):
         return None
@@ -66,16 +71,20 @@ def ref_id(ref: Optional[str]) -> Optional[str]:
         return ref.split(":")[-1]
     return ref.split("/")[-1]
 
+
 def get_organization_id(db, organization_identifier: Optional[str]) -> Optional[int]:
     """Get organization ID from identifier"""
     if not organization_identifier:
         return None
-    
+
     org = db.execute(
-        select(OrganizationV2).where(OrganizationV2.identifier == organization_identifier)
+        select(OrganizationV2).where(
+            OrganizationV2.identifier == organization_identifier
+        )
     ).scalar_one_or_none()
-    
+
     return org.id if org else None
+
 
 # -----------------------------
 # Upsert one Practitioner
@@ -84,10 +93,10 @@ def upsert_practitioner(db, res: Dict[str, Any]):
     fid = res.get("id")
     ident = first_or_none(res.get("identifier", []) or [])
     identifier = (ident or {}).get("value")
-    
+
     full_name, given_name, family_name = name_fields(res)
     gender = res.get("gender")
-    
+
     # Get specialty from qualification
     qualifications = res.get("qualification", []) or []
     specialty_code = None
@@ -98,10 +107,10 @@ def upsert_practitioner(db, res: Dict[str, Any]):
             sys, code, display = coding0(qual, "code")
             specialty_code = code
             specialty_display = display
-    
+
     phone = telecom_value(res, "phone")
     email = telecom_value(res, "email")
-    
+
     # Get organization from practitioner role
     organization_identifier = None
     practitioner_roles = res.get("practitionerRole", []) or []
@@ -111,7 +120,7 @@ def upsert_practitioner(db, res: Dict[str, Any]):
             org_ref = role.get("organization", {}).get("reference")
             if org_ref:
                 organization_identifier = ref_id(org_ref)
-    
+
     organization_id = get_organization_id(db, organization_identifier)
 
     # Try existing rows
@@ -149,6 +158,7 @@ def upsert_practitioner(db, res: Dict[str, Any]):
         db.add(obj)
         # db.flush() not required unless you need obj.id immediately
 
+
 # -----------------------------
 # Import Practitioners from a single Bundle
 # -----------------------------
@@ -172,7 +182,9 @@ def import_practitioners_from_bundle(bundle_path: Path):
             inserted_or_upserted += 1
 
         db.commit()
-        print(f"[practitioners] Upserted {inserted_or_upserted} practitioner(s) from {bundle_path.name}")
+        print(
+            f"[practitioners] Upserted {inserted_or_upserted} practitioner(s) from {bundle_path.name}"
+        )
     except IntegrityError as ie:
         db.rollback()
         print(f"[warn] IntegrityError in {bundle_path.name}: {ie}")
@@ -181,6 +193,7 @@ def import_practitioners_from_bundle(bundle_path: Path):
         print(f"[error] Failed on {bundle_path.name}: {e}")
     finally:
         db.close()
+
 
 # -----------------------------
 # Entry point: folder or single file
@@ -197,6 +210,7 @@ def import_path(path: Path):
             import_practitioners_from_bundle(f)
     else:
         print("Path not found:", path)
+
 
 if __name__ == "__main__":
     # Default: import all bundles from this folder

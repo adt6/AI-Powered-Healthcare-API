@@ -57,5 +57,3 @@ def test_filter_conditions_by_patient(client):
     assert r.status_code == 200
     for it in r.json():
         assert it["patient_id"] == pid
-
-

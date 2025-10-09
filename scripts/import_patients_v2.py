@@ -1,17 +1,20 @@
-import os
 import json
-from pathlib import Path
+import os
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.exc import IntegrityError
+
 from app_v2.database import SessionLocal
 from app_v2.models.patient import PatientV2
 
 # ---------- helpers to read FHIR fields ----------
 
+
 def first_or_none(x: Optional[List[Any]]):
     return x[0] if isinstance(x, list) and x else None
+
 
 def telecom_value(resource: Dict[str, Any], system: str) -> Optional[str]:
     telecom = resource.get("telecom", [])
@@ -20,10 +23,12 @@ def telecom_value(resource: Dict[str, Any], system: str) -> Optional[str]:
             return t.get("value")
     return None
 
+
 def address_fields(resource: Dict[str, Any]):
     addr = first_or_none(resource.get("address", [])) or {}
     line0 = first_or_none(addr.get("line", []))
     return line0, addr.get("city"), addr.get("state"), addr.get("postalCode")
+
 
 def human_name(resource: Dict[str, Any]):
     name = first_or_none(resource.get("name", [])) or {}
@@ -32,9 +37,11 @@ def human_name(resource: Dict[str, Any]):
     text = name.get("text")  # sometimes Synthea fills this
     return given0, family, text
 
+
 def patient_identifier(resource: Dict[str, Any]) -> Optional[str]:
     ident = first_or_none(resource.get("identifier", [])) or {}
     return ident.get("value")
+
 
 def get_marital_status(resource: Dict[str, Any]) -> Optional[str]:
     ms = resource.get("maritalStatus")
@@ -44,11 +51,13 @@ def get_marital_status(resource: Dict[str, Any]) -> Optional[str]:
     # return code or display
     return coding.get("code") or coding.get("display")
 
+
 def get_language(resource: Dict[str, Any]) -> Optional[str]:
     comm = first_or_none(resource.get("communication", [])) or {}
     lang = comm.get("language", {})
     coding = first_or_none(lang.get("coding", [])) or {}
     return coding.get("code") or coding.get("display")
+
 
 def get_extensions_value(resource: Dict[str, Any], url_match: str) -> Optional[str]:
     """
@@ -74,6 +83,7 @@ def get_extensions_value(resource: Dict[str, Any], url_match: str) -> Optional[s
                 return value_coding.get("display") or value_coding.get("code")
     return None
 
+
 def extract_patient_fields(p: Dict[str, Any]) -> Dict[str, Any]:
     identifier = patient_identifier(p) or p.get("id")
     given, family, text_name = human_name(p)
@@ -85,8 +95,12 @@ def extract_patient_fields(p: Dict[str, Any]) -> Dict[str, Any]:
     marital_status = get_marital_status(p)
     language = get_language(p)
     # Synthea US Core extensions (these URLs may vary by export)
-    race = get_extensions_value(p, "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race")
-    ethnicity = get_extensions_value(p, "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity")
+    race = get_extensions_value(
+        p, "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"
+    )
+    ethnicity = get_extensions_value(
+        p, "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity"
+    )
     deceased_date = p.get("deceasedDateTime")
     active = p.get("active", True)
 
@@ -109,12 +123,14 @@ def extract_patient_fields(p: Dict[str, Any]) -> Dict[str, Any]:
         "language": language,
         "race": race,
         "ethnicity": ethnicity,
-        "deceased_date": deceased_date,   # stored as ISO string in your model
+        "deceased_date": deceased_date,  # stored as ISO string in your model
         "active": active,
         "managing_organization_identifier": managing_org_ref,  # keep as reference string for now
     }
 
+
 # ---------- core importer ----------
+
 
 def import_patient_from_bundle(bundle_path: Path):
     """
@@ -166,6 +182,7 @@ def import_patient_from_bundle(bundle_path: Path):
     finally:
         db.close()
 
+
 def import_folder(folder: Path):
     jsons = list(folder.glob("*.json"))
     if not jsons:
@@ -173,6 +190,7 @@ def import_folder(folder: Path):
         return
     for jf in jsons:
         import_patient_from_bundle(jf)
+
 
 if __name__ == "__main__":
     # change these paths as needed

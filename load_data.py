@@ -1,7 +1,8 @@
 import json
 from datetime import date
+
 from app.database import SessionLocal
-from app.models import Patient, Practitioner, Encounter, Condition
+from app.models import Condition, Encounter, Patient, Practitioner
 
 # Create DB session
 db = SessionLocal()
@@ -32,7 +33,7 @@ with open("mock_data/encounters.json") as f:
         encounter = Encounter(
             date=date.fromisoformat(e["date"]),
             patient_id=e["patient_id"],
-            practitioner_id=e["practitioner_id"]
+            practitioner_id=e["practitioner_id"],
         )
         db.add(encounter)
 db.commit()
@@ -42,10 +43,7 @@ print(f"✅ Inserted {len(encounters)} encounters")
 with open("mock_data/conditions.json") as f:
     conditions = json.load(f)
     for c in conditions:
-        condition = Condition(
-            description=c["description"],
-            patient_id=c["patient_id"]
-        )
+        condition = Condition(description=c["description"], patient_id=c["patient_id"])
         db.add(condition)
 db.commit()
 print(f" Inserted {len(conditions)} conditions")

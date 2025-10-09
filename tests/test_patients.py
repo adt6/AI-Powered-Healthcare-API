@@ -45,7 +45,3 @@ def test_delete_patient_204(client):
     assert r.status_code == 204
     r2 = client.get(f"/api/v2/patients/{pat_id}")
     assert r2.status_code == 404
-
-
-
-

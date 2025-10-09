@@ -1,15 +1,16 @@
 import json
-from pathlib import Path
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app_v2.database import SessionLocal
-from app_v2.models.patient import PatientV2
 from app_v2.models.encounter import EncounterV2
 from app_v2.models.observation import ObservationV2
+from app_v2.models.patient import PatientV2
+
 
 # -----------------------------
 # Helpers
@@ -17,11 +18,13 @@ from app_v2.models.observation import ObservationV2
 def first_or_none(x):
     return x[0] if isinstance(x, list) and x else None
 
+
 def telecom_value(resource: Dict[str, Any], system: str) -> Optional[str]:
     for t in resource.get("telecom", []) or []:
         if t.get("system") == system:
             return t.get("value")
     return None
+
 
 def address_fields(resource: Dict[str, Any]):
     addr = first_or_none(resource.get("address", []) or [])
@@ -29,6 +32,7 @@ def address_fields(resource: Dict[str, Any]):
         return None, None, None, None
     line0 = first_or_none(addr.get("line", []) or [])
     return line0, addr.get("city"), addr.get("state"), addr.get("postalCode")
+
 
 def human_name(resource: Dict[str, Any]):
     nm = first_or_none(resource.get("name", []) or [])
@@ -39,11 +43,13 @@ def human_name(resource: Dict[str, Any]):
     text = nm.get("text")
     return given0, family, text
 
+
 def patient_identifier_from_resource(p: Dict[str, Any]) -> Optional[str]:
     ident = first_or_none(p.get("identifier", []) or [])
     if ident and isinstance(ident, dict):
         return ident.get("value")
     return None
+
 
 def ref_id(ref: Optional[str]) -> Optional[str]:
     if not ref or not isinstance(ref, str):
@@ -53,6 +59,7 @@ def ref_id(ref: Optional[str]) -> Optional[str]:
         return ref.split(":")[-1]
     return ref.split("/")[-1]
 
+
 def parse_iso_dt(v: Optional[str]) -> Optional[datetime]:
     if not v:
         return None
@@ -61,6 +68,7 @@ def parse_iso_dt(v: Optional[str]) -> Optional[datetime]:
         return datetime.fromisoformat(v)
     except Exception:
         return None
+
 
 def coding0(resource: Dict[str, Any], *path):
     cur = resource
@@ -78,6 +86,7 @@ def coding0(resource: Dict[str, Any], *path):
         return None, None, None
     return coding.get("system"), coding.get("code"), coding.get("display")
 
+
 # -----------------------------
 # Minimal Patient upsert to resolve FK
 # -----------------------------
@@ -94,12 +103,18 @@ def upsert_patient_min(db, res: Dict[str, Any], pat_map: Dict[str, int]):
 
     obj = None
     if identifier:
-        obj = db.execute(select(PatientV2).where(PatientV2.identifier == identifier)).scalar_one_or_none()
+        obj = db.execute(
+            select(PatientV2).where(PatientV2.identifier == identifier)
+        ).scalar_one_or_none()
 
     if obj:
         # fill only missing fields
-        obj.first_name = obj.first_name or (given or (text or "").split(" ")[0] if text else "Unknown")
-        obj.last_name  = obj.last_name  or (family or (text or "").split(" ")[-1] if text else "Unknown")
+        obj.first_name = obj.first_name or (
+            given or (text or "").split(" ")[0] if text else "Unknown"
+        )
+        obj.last_name = obj.last_name or (
+            family or (text or "").split(" ")[-1] if text else "Unknown"
+        )
         obj.birth_date = obj.birth_date or birth
         if not obj.gender and gender:
             obj.gender = gender
@@ -131,10 +146,13 @@ def upsert_patient_min(db, res: Dict[str, Any], pat_map: Dict[str, int]):
     if fid:
         pat_map[fid] = obj.id
 
+
 # -----------------------------
 # Encounter resolver (optional)
 # -----------------------------
-def resolve_encounter_id(db, encounter_reference: Optional[str], patient_id: Optional[int]) -> Optional[int]:
+def resolve_encounter_id(
+    db, encounter_reference: Optional[str], patient_id: Optional[int]
+) -> Optional[int]:
     """
     If your EncounterV2 model has an `identifier` column and you saved the FHIR Encounter.id there,
     this will try to link Observation.encounter -> EncounterV2.id.
@@ -157,13 +175,24 @@ def resolve_encounter_id(db, encounter_reference: Optional[str], patient_id: Opt
     found = db.execute(q).scalar_one_or_none()
     return found.id if found else None
 
+
 # -----------------------------
 # Observation extraction
 # -----------------------------
-def add_observation_row(db, patient_id: int, encounter_id: Optional[int], status: Optional[str],
-                        category_code: Optional[str], code: Optional[str], system: Optional[str],
-                        display: Optional[str], value_num: Optional[float], unit: Optional[str],
-                        value_text: Optional[str], effective_time: Optional[datetime]):
+def add_observation_row(
+    db,
+    patient_id: int,
+    encounter_id: Optional[int],
+    status: Optional[str],
+    category_code: Optional[str],
+    code: Optional[str],
+    system: Optional[str],
+    display: Optional[str],
+    value_num: Optional[float],
+    unit: Optional[str],
+    value_text: Optional[str],
+    effective_time: Optional[datetime],
+):
     obs = ObservationV2(
         patient_id=patient_id,
         encounter_id=encounter_id,
@@ -177,6 +206,7 @@ def add_observation_row(db, patient_id: int, encounter_id: Optional[int], status
         effective_time=effective_time,
     )
     db.add(obs)
+
 
 def import_observations_from_bundle(bundle_path: Path):
     print(f"[observations] Reading: {bundle_path}")
@@ -219,7 +249,10 @@ def import_observations_from_bundle(bundle_path: Path):
             status = res.get("status")
             cat_sys, cat_code, cat_disp = coding0(res, "category")
             sys, code, disp = coding0(res, "code")
-            effective = parse_iso_dt(res.get("effectiveDateTime") or (res.get("effectivePeriod") or {}).get("start"))
+            effective = parse_iso_dt(
+                res.get("effectiveDateTime")
+                or (res.get("effectivePeriod") or {}).get("start")
+            )
 
             # Case A: BP panel (85354-9) -> explode components
             if code == "85354-9" and isinstance(res.get("component"), list):
@@ -230,13 +263,41 @@ def import_observations_from_bundle(bundle_path: Path):
                     c_unit = vq.get("unit")
                     # also support valueString if present
                     if c_val is None and "valueString" in comp:
-                        add_observation_row(db, patient_id, encounter_id, status, cat_code, ccode, csys, cdisp,
-                                            None, None, comp.get("valueString"), effective)
+                        add_observation_row(
+                            db,
+                            patient_id,
+                            encounter_id,
+                            status,
+                            cat_code,
+                            ccode,
+                            csys,
+                            cdisp,
+                            None,
+                            None,
+                            comp.get("valueString"),
+                            effective,
+                        )
                         inserted += 1
                     else:
-                        add_observation_row(db, patient_id, encounter_id, status, cat_code, ccode, csys, cdisp,
-                                            float(c_val) if isinstance(c_val, (int, float, str)) and str(c_val).replace('.','',1).isdigit() else None,
-                                            c_unit, None, effective)
+                        add_observation_row(
+                            db,
+                            patient_id,
+                            encounter_id,
+                            status,
+                            cat_code,
+                            ccode,
+                            csys,
+                            cdisp,
+                            (
+                                float(c_val)
+                                if isinstance(c_val, (int, float, str))
+                                and str(c_val).replace(".", "", 1).isdigit()
+                                else None
+                            ),
+                            c_unit,
+                            None,
+                            effective,
+                        )
                         inserted += 1
                 continue  # done with this Observation resource
 
@@ -259,12 +320,26 @@ def import_observations_from_bundle(bundle_path: Path):
                 # sometimes values are coded text
                 _, _, value_text = coding0(res, "valueCodeableConcept")
 
-            add_observation_row(db, patient_id, encounter_id, status, cat_code, code, sys, disp,
-                                value_num, unit, value_text, effective)
+            add_observation_row(
+                db,
+                patient_id,
+                encounter_id,
+                status,
+                cat_code,
+                code,
+                sys,
+                disp,
+                value_num,
+                unit,
+                value_text,
+                effective,
+            )
             inserted += 1
 
         db.commit()
-        print(f"[observations] Inserted {inserted} observation row(s) from {bundle_path.name}")
+        print(
+            f"[observations] Inserted {inserted} observation row(s) from {bundle_path.name}"
+        )
     except IntegrityError as ie:
         db.rollback()
         print(f"[warn] IntegrityError in {bundle_path.name}: {ie}")
@@ -273,6 +348,7 @@ def import_observations_from_bundle(bundle_path: Path):
         print(f"[error] Failed on {bundle_path.name}: {e}")
     finally:
         db.close()
+
 
 # -----------------------------
 # Entry point: folder or single file
@@ -289,6 +365,7 @@ def import_path(path: Path):
             import_observations_from_bundle(f)
     else:
         print("Path not found:", path)
+
 
 if __name__ == "__main__":
     # Default: import all bundles from this folder

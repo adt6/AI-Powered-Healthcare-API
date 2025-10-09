@@ -1,11 +1,13 @@
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.encounter import EncounterV2
-from app_v2.schemas.encounter import EncounterCreate, EncounterRead, EncounterUpdate
+from app_v2.schemas.encounter import (EncounterCreate, EncounterRead,
+                                      EncounterUpdate)
 
 router = APIRouter(prefix="/encounters", tags=["encounters v2"])
 
@@ -25,7 +27,7 @@ def list_encounters(
 ):
     """
     List encounters with filtering options.
-    
+
     - **patient_id**: Filter by specific patient (patient-based encounters)
     - **practitioner_id**: Filter by specific practitioner
     - **organization_id**: Filter by specific organization
@@ -35,7 +37,7 @@ def list_encounters(
     - **class_code**: Filter by encounter class (emergency, outpatient, etc.)
     """
     query = db.query(EncounterV2)
-    
+
     if patient_id is not None:
         query = query.filter(EncounterV2.patient_id == patient_id)
     if practitioner_id is not None:
@@ -51,7 +53,9 @@ def list_encounters(
     if class_code is not None:
         query = query.filter(EncounterV2.class_code == class_code)
 
-    encounters = query.order_by(EncounterV2.start_time.desc()).limit(limit).offset(offset).all()
+    encounters = (
+        query.order_by(EncounterV2.start_time.desc()).limit(limit).offset(offset).all()
+    )
     return encounters
 
 
@@ -60,7 +64,9 @@ def get_encounter(encounter_id: int, db: Session = Depends(get_db)):
     """Get a specific encounter by ID."""
     encounter = db.query(EncounterV2).get(encounter_id)
     if not encounter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Encounter not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Encounter not found"
+        )
     return encounter
 
 
@@ -75,11 +81,15 @@ def create_encounter(payload: EncounterCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{encounter_id}", response_model=EncounterRead)
-def update_encounter(encounter_id: int, payload: EncounterUpdate, db: Session = Depends(get_db)):
+def update_encounter(
+    encounter_id: int, payload: EncounterUpdate, db: Session = Depends(get_db)
+):
     """Update an existing encounter."""
     encounter = db.query(EncounterV2).get(encounter_id)
     if not encounter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Encounter not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Encounter not found"
+        )
 
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(encounter, key, value)
@@ -94,7 +104,9 @@ def delete_encounter(encounter_id: int, db: Session = Depends(get_db)):
     """Delete an encounter."""
     encounter = db.query(EncounterV2).get(encounter_id)
     if not encounter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Encounter not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Encounter not found"
+        )
 
     db.delete(encounter)
     db.commit()

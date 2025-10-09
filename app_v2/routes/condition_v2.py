@@ -1,11 +1,13 @@
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.condition import ConditionV2
-from app_v2.schemas.condition import ConditionCreate, ConditionRead, ConditionUpdate
+from app_v2.schemas.condition import (ConditionCreate, ConditionRead,
+                                      ConditionUpdate)
 
 router = APIRouter(prefix="/conditions", tags=["conditions v2"])
 
@@ -26,7 +28,7 @@ def list_conditions(
 ):
     """
     List conditions with filtering options.
-    
+
     - **patient_id**: Filter by specific patient (patient-based conditions)
     - **encounter_id**: Filter by specific encounter
     - **code**: Filter by condition code (e.g., diabetes, hypertension)
@@ -37,7 +39,7 @@ def list_conditions(
     - **onset_to**: Conditions with onset before this date/time
     """
     query = db.query(ConditionV2)
-    
+
     if patient_id is not None:
         query = query.filter(ConditionV2.patient_id == patient_id)
     if encounter_id is not None:
@@ -55,7 +57,12 @@ def list_conditions(
     if onset_to is not None:
         query = query.filter(ConditionV2.onset_time <= onset_to)
 
-    conditions = query.order_by(ConditionV2.recorded_date.desc()).limit(limit).offset(offset).all()
+    conditions = (
+        query.order_by(ConditionV2.recorded_date.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
     return conditions
 
 
@@ -64,7 +71,9 @@ def get_condition(condition_id: int, db: Session = Depends(get_db)):
     """Get a specific condition by ID."""
     condition = db.query(ConditionV2).get(condition_id)
     if not condition:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Condition not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Condition not found"
+        )
     return condition
 
 
@@ -79,11 +88,15 @@ def create_condition(payload: ConditionCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{condition_id}", response_model=ConditionRead)
-def update_condition(condition_id: int, payload: ConditionUpdate, db: Session = Depends(get_db)):
+def update_condition(
+    condition_id: int, payload: ConditionUpdate, db: Session = Depends(get_db)
+):
     """Update an existing condition."""
     condition = db.query(ConditionV2).get(condition_id)
     if not condition:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Condition not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Condition not found"
+        )
 
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(condition, key, value)
@@ -98,7 +111,9 @@ def delete_condition(condition_id: int, db: Session = Depends(get_db)):
     """Delete a condition."""
     condition = db.query(ConditionV2).get(condition_id)
     if not condition:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Condition not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Condition not found"
+        )
 
     db.delete(condition)
     db.commit()

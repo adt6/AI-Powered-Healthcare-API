@@ -1,10 +1,12 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.practitioner import PractitionerV2
-from app_v2.schemas.practitioner import PractitionerCreate, PractitionerRead, PractitionerUpdate
+from app_v2.schemas.practitioner import (PractitionerCreate, PractitionerRead,
+                                         PractitionerUpdate)
 
 router = APIRouter(prefix="/practitioners", tags=["practitioners v2"])
 
@@ -22,7 +24,7 @@ def list_practitioners(
 ):
     """
     List practitioners with filtering options.
-    
+
     - **name**: Filter by practitioner name (partial match)
     - **organization_id**: Filter by organization (practitioners at specific hospital/clinic)
     - **specialty_code**: Filter by medical specialty (cardiology, neurology, etc.)
@@ -30,7 +32,7 @@ def list_practitioners(
     - **identifier**: Filter by practitioner identifier
     """
     query = db.query(PractitionerV2)
-    
+
     if name is not None:
         query = query.filter(PractitionerV2.name.ilike(f"%{name}%"))
     if organization_id is not None:
@@ -42,7 +44,9 @@ def list_practitioners(
     if identifier is not None:
         query = query.filter(PractitionerV2.identifier == identifier)
 
-    practitioners = query.order_by(PractitionerV2.name.asc()).limit(limit).offset(offset).all()
+    practitioners = (
+        query.order_by(PractitionerV2.name.asc()).limit(limit).offset(offset).all()
+    )
     return practitioners
 
 
@@ -51,7 +55,9 @@ def get_practitioner(practitioner_id: int, db: Session = Depends(get_db)):
     """Get a specific practitioner by ID."""
     practitioner = db.query(PractitionerV2).get(practitioner_id)
     if not practitioner:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Practitioner not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Practitioner not found"
+        )
     return practitioner
 
 
@@ -66,11 +72,15 @@ def create_practitioner(payload: PractitionerCreate, db: Session = Depends(get_d
 
 
 @router.put("/{practitioner_id}", response_model=PractitionerRead)
-def update_practitioner(practitioner_id: int, payload: PractitionerUpdate, db: Session = Depends(get_db)):
+def update_practitioner(
+    practitioner_id: int, payload: PractitionerUpdate, db: Session = Depends(get_db)
+):
     """Update an existing practitioner."""
     practitioner = db.query(PractitionerV2).get(practitioner_id)
     if not practitioner:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Practitioner not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Practitioner not found"
+        )
 
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(practitioner, key, value)
@@ -85,7 +95,9 @@ def delete_practitioner(practitioner_id: int, db: Session = Depends(get_db)):
     """Delete a practitioner."""
     practitioner = db.query(PractitionerV2).get(practitioner_id)
     if not practitioner:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Practitioner not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Practitioner not found"
+        )
 
     db.delete(practitioner)
     db.commit()

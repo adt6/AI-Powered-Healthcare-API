@@ -1,14 +1,15 @@
-
 import json
-from pathlib import Path
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+
 from app_v2.database import SessionLocal
-from app_v2.models.patient import PatientV2
 from app_v2.models.condition import ConditionV2
+from app_v2.models.patient import PatientV2
+
 
 # -----------------------------
 # Helpers
@@ -16,11 +17,13 @@ from app_v2.models.condition import ConditionV2
 def first_or_none(x):
     return x[0] if isinstance(x, list) and x else None
 
+
 def telecom_value(resource: Dict[str, Any], system: str) -> Optional[str]:
     for t in resource.get("telecom", []) or []:
         if t.get("system") == system:
             return t.get("value")
     return None
+
 
 def address_fields(resource: Dict[str, Any]):
     addr = first_or_none(resource.get("address", []) or [])
@@ -28,6 +31,7 @@ def address_fields(resource: Dict[str, Any]):
         return None, None, None, None
     line0 = first_or_none(addr.get("line", []) or [])
     return line0, addr.get("city"), addr.get("state"), addr.get("postalCode")
+
 
 def human_name(resource: Dict[str, Any]):
     nm = first_or_none(resource.get("name", []) or [])
@@ -38,11 +42,13 @@ def human_name(resource: Dict[str, Any]):
     text = nm.get("text")
     return given0, family, text
 
+
 def patient_identifier_from_resource(p: Dict[str, Any]) -> Optional[str]:
     ident = first_or_none(p.get("identifier", []) or [])
     if ident and isinstance(ident, dict):
         return ident.get("value")
     return None
+
 
 def ref_id(ref: Optional[str]) -> Optional[str]:
     if not ref or not isinstance(ref, str):
@@ -51,6 +57,7 @@ def ref_id(ref: Optional[str]) -> Optional[str]:
     if ref.startswith("urn:uuid:"):
         return ref.split(":")[-1]
     return ref.split("/")[-1]
+
 
 def coding0(resource: Dict[str, Any], *path):
     cur = resource
@@ -68,6 +75,7 @@ def coding0(resource: Dict[str, Any], *path):
         return None, None, None
     return coding.get("system"), coding.get("code"), coding.get("display")
 
+
 def parse_iso_dt(v: Optional[str]) -> Optional[datetime]:
     if not v:
         return None
@@ -76,6 +84,7 @@ def parse_iso_dt(v: Optional[str]) -> Optional[datetime]:
         return datetime.fromisoformat(v)
     except Exception:
         return None
+
 
 # -----------------------------
 # Core: upsert one Patient from a resource (minimal fields)
@@ -93,12 +102,18 @@ def upsert_patient_min(db, res: Dict[str, Any], pat_map: Dict[str, int]):
 
     obj = None
     if identifier:
-        obj = db.execute(select(PatientV2).where(PatientV2.identifier == identifier)).scalar_one_or_none()
+        obj = db.execute(
+            select(PatientV2).where(PatientV2.identifier == identifier)
+        ).scalar_one_or_none()
 
     if obj:
         # Update minimal fields if missing
-        obj.first_name = obj.first_name or (given or (text or "").split(" ")[0] if text else "Unknown")
-        obj.last_name  = obj.last_name  or (family or (text or "").split(" ")[-1] if text else "Unknown")
+        obj.first_name = obj.first_name or (
+            given or (text or "").split(" ")[0] if text else "Unknown"
+        )
+        obj.last_name = obj.last_name or (
+            family or (text or "").split(" ")[-1] if text else "Unknown"
+        )
         obj.birth_date = obj.birth_date or birth
         if not obj.gender and gender:
             obj.gender = gender
@@ -129,6 +144,7 @@ def upsert_patient_min(db, res: Dict[str, Any], pat_map: Dict[str, int]):
 
     if fid:
         pat_map[fid] = obj.id
+
 
 # -----------------------------
 # Import Conditions from a single Bundle
@@ -168,8 +184,12 @@ def import_conditions_from_bundle(bundle_path: Path):
 
             sys, code, disp = coding0(res, "code")
             # statuses
-            clin = first_or_none((res.get("clinicalStatus") or {}).get("coding", []) or [])
-            ver  = first_or_none((res.get("verificationStatus") or {}).get("coding", []) or [])
+            clin = first_or_none(
+                (res.get("clinicalStatus") or {}).get("coding", []) or []
+            )
+            ver = first_or_none(
+                (res.get("verificationStatus") or {}).get("coding", []) or []
+            )
             clinical_status = (clin or {}).get("code")
             verification_status = (ver or {}).get("code")
 
@@ -204,6 +224,7 @@ def import_conditions_from_bundle(bundle_path: Path):
     finally:
         db.close()
 
+
 # -----------------------------
 # Entry point: folder or single file
 # -----------------------------
@@ -219,6 +240,7 @@ def import_path(path: Path):
             import_conditions_from_bundle(f)
     else:
         print("Path not found:", path)
+
 
 if __name__ == "__main__":
     # Default: read every *.json in ./data/bundles

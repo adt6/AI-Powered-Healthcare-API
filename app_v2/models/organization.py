@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String
+
 from app_v2.database import Base
+
 
 class OrganizationV2(Base):
     __tablename__ = "organizations_v2"
