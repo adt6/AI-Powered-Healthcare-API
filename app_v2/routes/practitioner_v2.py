@@ -5,8 +5,11 @@ from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.practitioner import PractitionerV2
-from app_v2.schemas.practitioner import (PractitionerCreate, PractitionerRead,
-                                         PractitionerUpdate)
+from app_v2.schemas.practitioner import (
+    PractitionerCreate,
+    PractitionerRead,
+    PractitionerUpdate,
+)
 
 router = APIRouter(prefix="/practitioners", tags=["practitioners v2"])
 

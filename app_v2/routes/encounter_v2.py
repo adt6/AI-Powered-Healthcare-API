@@ -6,8 +6,7 @@ from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.encounter import EncounterV2
-from app_v2.schemas.encounter import (EncounterCreate, EncounterRead,
-                                      EncounterUpdate)
+from app_v2.schemas.encounter import EncounterCreate, EncounterRead, EncounterUpdate
 
 router = APIRouter(prefix="/encounters", tags=["encounters v2"])
 

@@ -6,8 +6,7 @@ from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.condition import ConditionV2
-from app_v2.schemas.condition import (ConditionCreate, ConditionRead,
-                                      ConditionUpdate)
+from app_v2.schemas.condition import ConditionCreate, ConditionRead, ConditionUpdate
 
 router = APIRouter(prefix="/conditions", tags=["conditions v2"])
 

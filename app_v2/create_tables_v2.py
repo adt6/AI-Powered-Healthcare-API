@@ -1,6 +1,12 @@
 from app_v2.database import Base, engine
-from app_v2.models import (ConditionV2, EncounterV2, ObservationV2,
-                           OrganizationV2, PatientV2, PractitionerV2)
+from app_v2.models import (
+    ConditionV2,
+    EncounterV2,
+    ObservationV2,
+    OrganizationV2,
+    PatientV2,
+    PractitionerV2,
+)
 
 
 def main():

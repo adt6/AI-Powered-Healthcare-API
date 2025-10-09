@@ -5,8 +5,11 @@ from sqlalchemy.orm import Session
 
 from app_v2.database import get_db
 from app_v2.models.organization import OrganizationV2
-from app_v2.schemas.organization import (OrganizationCreate, OrganizationRead,
-                                         OrganizationUpdate)
+from app_v2.schemas.organization import (
+    OrganizationCreate,
+    OrganizationRead,
+    OrganizationUpdate,
+)
 
 router = APIRouter(prefix="/organizations", tags=["organizations v2"])
 

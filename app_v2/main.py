@@ -1,7 +1,13 @@
 from fastapi import FastAPI
 
-from app_v2.routes import (condition_v2, encounter_v2, observation_v2,
-                           organization_v2, patient_v2, practitioner_v2)
+from app_v2.routes import (
+    condition_v2,
+    encounter_v2,
+    observation_v2,
+    organization_v2,
+    patient_v2,
+    practitioner_v2,
+)
 
 app = FastAPI(title="Healthcare API v2", version="2.0.0")
 

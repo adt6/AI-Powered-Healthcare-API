@@ -147,10 +147,14 @@ def create_assistant(model_type=None) -> AgentExecutor:
     llm = get_llm(model_type)
 
     # Step 3: Get tools (functions to call your API)
-    from .tools.patient_tools import (get_patient_conditions,
-                                      get_patient_encounters, get_patient_info,
-                                      get_patient_observations,
-                                      get_patient_summary, search_patients)
+    from .tools.patient_tools import (
+        get_patient_conditions,
+        get_patient_encounters,
+        get_patient_info,
+        get_patient_observations,
+        get_patient_summary,
+        search_patients,
+    )
 
     tools = [
         get_patient_info,

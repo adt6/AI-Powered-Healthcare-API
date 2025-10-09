@@ -7,8 +7,12 @@ from typing import Any, Dict, List, Optional
 
 from langchain.tools import tool
 
-from .base_tools import (api_client, format_list_summary,
-                         format_patient_summary, format_patient_summary_html)
+from .base_tools import (
+    api_client,
+    format_list_summary,
+    format_patient_summary,
+    format_patient_summary_html,
+)
 
 
 @tool
