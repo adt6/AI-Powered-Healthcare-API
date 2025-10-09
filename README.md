@@ -1,6 +1,6 @@
-# 🏥 FastAPI Healthcare API
+# 🏥 AI-Powered Healthcare API
 
-A comprehensive, production-ready FastAPI project for managing healthcare data using PostgreSQL and Docker. Built with clean architecture, comprehensive data modeling, and RESTful CRUD endpoints following FHIR (Fast Healthcare Interoperability Resources) standards.
+A comprehensive, production-ready FastAPI project for managing healthcare data using PostgreSQL and Docker, enhanced with an intelligent AI clinical assistant. Built with clean architecture, comprehensive data modeling, RESTful CRUD endpoints following FHIR (Fast Healthcare Interoperability Resources) standards, and powered by advanced AI models for natural language healthcare data interaction.
 
 ---
 
@@ -14,6 +14,9 @@ A comprehensive, production-ready FastAPI project for managing healthcare data u
 - 🔧 **Swagger UI** for interactive API testing
 - 📊 **Comprehensive data modeling** with proper relationships
 - 🏗️ **Clean architecture** with separation of concerns
+- 🤖 **AI-Powered Clinical Assistant** with multi-LLM support
+- 💬 **Interactive Chatbot Interface** using Streamlit
+- 🛠️ **Specialized Healthcare Tools** for data retrieval and analysis
 
 ---
 
@@ -28,10 +31,17 @@ Building API/
 │   ├── schemas/            # Pydantic validation schemas
 │   ├── database.py         # Database configuration
 │   └── main.py             # FastAPI application entry point
+├── agent/                  # AI Clinical Assistant System
+│   ├── chat/               # Streamlit chatbot interface
+│   ├── prompts/            # Clinical instructions and system prompts
+│   ├── tools/              # Specialized healthcare data tools
+│   ├── agent_config.py     # AI model configuration
+│   └── agent_factory.py    # Agent creation and management
 ├── scripts/                # Data import utilities
 ├── data/                   # FHIR bundle data files
 ├── mock_data/              # Sample data for testing
 ├── tests/                  # Test suite
+├── run_chatbot.py          # AI chatbot launcher
 └── docker-compose.yml      # Docker configuration
 ```
 
@@ -233,6 +243,186 @@ CREATE TABLE observations_v2 (
     effective_time TIMESTAMP,            -- When observation was taken
     issued_time TIMESTAMP                -- When observation was recorded
 );
+```
+
+---
+
+## 🤖 AI-Powered Clinical Assistant
+
+The project includes a sophisticated AI clinical assistant that provides intelligent healthcare data analysis and patient information retrieval through natural language interactions.
+
+### **🧠 Multi-LLM Support**
+
+The AI assistant supports multiple large language models for flexibility and performance optimization:
+
+#### **Supported Models:**
+- **Claude 3.5 Sonnet** (Anthropic) - High-performance reasoning
+- **Claude 3 Haiku** (Anthropic) - Fast, cost-effective responses
+- **Llama 3.3 70B** (via Groq) - Open-source, versatile model
+- **Mixtral Saba 24B** (via Groq) - Efficient mixture-of-experts model
+- **GPT-4o Mini** (OpenAI) - Compact, powerful model
+- **Gemini 2.5 Flash** (Google) - Fast, multimodal capabilities
+
+#### **Default Configuration:**
+```python
+DEFAULT_LLM_TYPE = "llama_groq"  # Llama 3.3 70B via Groq
+DEFAULT_API_BASE_URL = "http://localhost:8000/api/v2"
+```
+
+### **🛠️ Specialized Healthcare Tools**
+
+The AI assistant is equipped with specialized tools for healthcare data interaction:
+
+#### **Patient Data Tools:**
+- **Patient Search** - Find patients by demographics, identifiers, or medical record numbers
+- **Patient Summary** - Generate comprehensive patient overviews
+- **Patient History** - Retrieve complete medical history and timeline
+- **Demographics Analysis** - Analyze patient population characteristics
+
+#### **Clinical Data Tools:**
+- **Encounter Analysis** - Review patient visits, appointments, and hospital stays
+- **Condition Tracking** - Monitor diagnoses, problems, and clinical status
+- **Observation Insights** - Analyze test results, vital signs, and measurements
+- **Practitioner Information** - Access healthcare provider details and specialties
+
+#### **Advanced Analytics:**
+- **Cross-Patient Analysis** - Identify patterns across patient populations
+- **Temporal Analysis** - Track changes over time in patient conditions
+- **Clinical Decision Support** - Provide evidence-based recommendations
+- **Data Quality Assessment** - Identify gaps or inconsistencies in records
+
+### **💬 Interactive Chatbot Interface**
+
+#### **Streamlit Web Application:**
+- **User-Friendly Interface** - Clean, intuitive chat interface
+- **Real-Time Responses** - Instant AI-powered healthcare insights
+- **Context-Aware Conversations** - Maintains conversation context
+- **Multi-Modal Support** - Handles text, structured queries, and natural language
+
+#### **Access Methods:**
+```bash
+# Launch the chatbot
+python run_chatbot.py
+
+# Or via Docker Compose
+docker-compose up chatbot
+```
+
+**Web Interface:** http://localhost:8501
+
+### **🎯 Clinical Use Cases**
+
+#### **For Healthcare Professionals:**
+- **Patient Lookup** - "Find all patients with diabetes in the last 6 months"
+- **Clinical Summaries** - "Give me a summary of patient John Doe's recent encounters"
+- **Trend Analysis** - "Show me the trend of blood pressure readings for patient 123"
+- **Provider Information** - "Which cardiologists are available at City Hospital?"
+
+#### **For Healthcare Administrators:**
+- **Population Health** - "How many patients have active hypertension conditions?"
+- **Resource Planning** - "What are the most common encounter types this month?"
+- **Quality Metrics** - "Show me patients with incomplete demographic information"
+- **Compliance Monitoring** - "Identify patients with missing required documentation"
+
+#### **For Clinical Researchers:**
+- **Data Mining** - "Find all patients with specific condition codes"
+- **Cohort Analysis** - "Identify patients meeting specific criteria"
+- **Outcome Tracking** - "Monitor treatment effectiveness across patient groups"
+- **Pattern Recognition** - "Identify unusual patterns in patient data"
+
+### **🔒 Privacy & Security Features**
+
+#### **Data Protection:**
+- **HIPAA-Compliant Design** - Built with healthcare privacy standards
+- **Secure API Integration** - Encrypted communication with healthcare systems
+- **Access Control** - Role-based access to sensitive information
+- **Audit Logging** - Track all data access and modifications
+
+#### **Clinical Safety:**
+- **Factual Responses** - AI provides accurate, data-driven insights
+- **Uncertainty Handling** - Clearly indicates when information is incomplete
+- **Clinical Context** - Maintains medical accuracy and relevance
+- **Error Prevention** - Validates data before presenting to users
+
+### **⚙️ Configuration & Customization**
+
+#### **Model Selection:**
+```python
+# In agent_config.py
+DEFAULT_LLM_TYPE = "llama_groq"  # Change to preferred model
+```
+
+#### **Available Options:**
+- `"haiku"` - Claude 3 Haiku (fast, cost-effective)
+- `"sonnet"` - Claude 3.5 Sonnet (high-performance)
+- `"llama_groq"` - Llama 3.3 70B (open-source, versatile)
+- `"mixtral_groq"` - Mixtral Saba 24B (efficient)
+- `"openai"` - GPT-4o Mini (compact, powerful)
+- `"gemini"` - Gemini 2.5 Flash (fast, multimodal)
+
+#### **Custom Instructions:**
+The AI assistant uses specialized clinical instructions located in `agent/prompts/clinical_instructions.md` that can be customized for specific healthcare workflows and requirements.
+
+### **🚀 Getting Started with AI Assistant**
+
+#### **1. Launch the Chatbot:**
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the AI assistant
+python run_chatbot.py
+```
+
+#### **2. Access the Interface:**
+- Open your browser to http://localhost:8501
+- Start chatting with the clinical AI assistant
+
+#### **3. Example Queries:**
+```
+"Find all patients with diabetes"
+"Show me patient John Doe's medical history"
+"What are the most common conditions in our database?"
+"Give me a summary of recent encounters"
+```
+
+#### **4. Docker Deployment:**
+```bash
+# Start all services including AI chatbot
+docker-compose up
+
+# Access chatbot at http://localhost:8501
+# Access API at http://localhost:8000
+```
+
+### **🔧 AI Assistant Architecture**
+
+#### **Component Overview:**
+```
+AI Clinical Assistant
+├── Agent Factory (agent_factory.py)
+│   ├── LLM Configuration
+│   ├── Tool Integration
+│   └── Response Generation
+├── Healthcare Tools (agent/tools/)
+│   ├── Patient Tools (patient_tools.py)
+│   ├── Base Tools (base_tools.py)
+│   └── Custom Healthcare Functions
+├── Chat Interface (agent/chat/)
+│   ├── Streamlit App (streamlit_app.py)
+│   ├── Web Interface (web_interface.py)
+│   └── User Interaction Layer
+└── Clinical Prompts (agent/prompts/)
+    ├── Clinical Instructions (clinical_instructions.md)
+    ├── System Prompts (system_prompts.py)
+    └── Context Templates
+```
+
+#### **Data Flow:**
+```
+User Query → Streamlit Interface → AI Agent → Healthcare Tools → API → Database
+                ↓
+            AI Response ← Clinical Analysis ← Data Processing ← FHIR Data
 ```
 
 ---
@@ -458,12 +648,26 @@ Practitioner (Healthcare Provider)
 
 ## 🗃️ Tech Stack
 
+### **Backend & API:**
 - **Backend Framework**: FastAPI 0.116.1
 - **Database**: PostgreSQL with SQLAlchemy ORM
 - **Data Validation**: Pydantic
-- **Containerization**: Docker + Docker Compose
 - **API Documentation**: Swagger UI (OpenAPI)
 - **Development Server**: Uvicorn
+
+### **AI & Machine Learning:**
+- **LLM Framework**: LangChain
+- **AI Models**: Claude 3.5 Sonnet, Llama 3.3 70B, GPT-4o Mini, Gemini 2.5 Flash
+- **AI Providers**: Anthropic, Groq, OpenAI, Google AI
+- **Agent Framework**: Custom healthcare-focused agent system
+- **Chat Interface**: Streamlit
+
+### **DevOps & Deployment:**
+- **Containerization**: Docker + Docker Compose
+- **CI/CD**: GitHub Actions
+- **Code Quality**: Black, isort, flake8, mypy
+- **Testing**: pytest with coverage reporting
+- **Security**: Safety, Bandit security scanning
 
 ---
 
@@ -479,11 +683,13 @@ Practitioner (Healthcare Provider)
 git clone <your-repository-url>
 cd your-project-directory
 
-# Start the services
+# Start all services (API + Database + AI Chatbot)
 docker-compose up -d
 
-# The API will be available at http://localhost:8000
-# Swagger UI at http://localhost:8000/docs
+# Services will be available at:
+# - API: http://localhost:8000
+# - Swagger UI: http://localhost:8000/docs
+# - AI Chatbot: http://localhost:8501
 ```
 
 ### **Local Development**
@@ -498,11 +704,16 @@ pip install -r requirements.txt
 # Set up database (if not already done)
 python app_v2/create_tables_v2.py
 
-# Run the application
+# Run the API application
 uvicorn app_v2.main:app --reload
 
-# The API will be available at http://localhost:8000
-# Interactive docs at http://localhost:8000/docs
+# In a separate terminal, run the AI chatbot
+python run_chatbot.py
+
+# Services will be available at:
+# - API: http://localhost:8000
+# - Interactive docs: http://localhost:8000/docs
+# - AI Chatbot: http://localhost:8501
 ```
 
 ### **🚀 Quick API Testing**
@@ -523,7 +734,30 @@ uvicorn app_v2.main:app --reload
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-#### **3. Test Patient-Based Filtering**
+### **🤖 Quick AI Assistant Testing**
+
+#### **1. Launch the AI Chatbot**
+```bash
+# In a separate terminal
+python run_chatbot.py
+```
+
+#### **2. Access the Chat Interface**
+- Open your browser to **http://localhost:8501**
+- Start chatting with the clinical AI assistant
+
+#### **3. Try Example Queries**
+```
+"Find all patients with diabetes"
+"Show me patient demographics"
+"What are the most common conditions?"
+"Give me a summary of recent encounters"
+"Which practitioners are available?"
+```
+
+### **🔍 API Testing Examples**
+
+#### **1. Test Patient-Based Filtering**
 ```bash
 # Get all encounters for a patient
 curl "http://localhost:8000/api/v2/encounters?patient_id=1&limit=5"
@@ -544,7 +778,7 @@ curl "http://localhost:8000/api/v2/practitioners?organization_id=1&limit=5"
 curl "http://localhost:8000/api/v2/organizations?type_code=hospital&limit=5"
 ```
 
-#### **5. Create New Records**
+#### **3. Create New Records**
 ```bash
 # Create a new patient
 curl -X POST "http://localhost:8000/api/v2/patients" \
