@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.exc import IntegrityError
 
-from app_v2.database import SessionLocal
-from app_v2.models.patient import PatientV2
+from api.v2.database import SessionLocal
+from api.v2.models.patient import PatientV2
 
 # ---------- helpers to read FHIR fields ----------
 

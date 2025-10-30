@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routes import condition, encounter, patient, practitioner
+from api.v1.routes import condition, encounter, patient, practitioner
 
 app = FastAPI()
 

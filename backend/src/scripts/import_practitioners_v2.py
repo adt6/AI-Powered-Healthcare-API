@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app_v2.database import SessionLocal
-from app_v2.models.organization import OrganizationV2
-from app_v2.models.practitioner import PractitionerV2
+from api.v2.database import SessionLocal
+from api.v2.models.organization import OrganizationV2
+from api.v2.models.practitioner import PractitionerV2
 
 
 # -----------------------------

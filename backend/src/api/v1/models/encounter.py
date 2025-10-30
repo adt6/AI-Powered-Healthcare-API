@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Date, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from api.v1.database import Base
 
 
 class Encounter(Base):

@@ -67,7 +67,7 @@ def main():
         sys.exit(1)
 
     # Get the path to the Streamlit app
-    app_path = Path(__file__).parent / "agent" / "chat" / "streamlit_app.py"
+    app_path = Path(__file__).parent / "backend" / "src" / "agents" / "chat" / "streamlit_app.py"
 
     if not app_path.exists():
         print(f"❌ Streamlit app not found at {app_path}")

@@ -4,9 +4,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app_v2.database import get_db
-from app_v2.models.encounter import EncounterV2
-from app_v2.schemas.encounter import EncounterCreate, EncounterRead, EncounterUpdate
+from api.v2.database import get_db
+from api.v2.models.encounter import EncounterV2
+from api.v2.schemas.encounter import EncounterCreate, EncounterRead, EncounterUpdate
 
 router = APIRouter(prefix="/encounters", tags=["encounters v2"])
 

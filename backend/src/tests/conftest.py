@@ -6,9 +6,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app_v2.database import Base, get_db
-from app_v2.main import app
-from app_v2.models.patient import PatientV2
+from api.v2.database import Base, get_db
+from api.v2.main import app
+from api.v2.models.patient import PatientV2
 
 # Create a single in-memory SQLite engine for the entire test session
 engine = create_engine(

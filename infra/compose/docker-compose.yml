@@ -20,7 +20,9 @@ services:
 
   # 🚀 FastAPI Application
   api:
-    build: .
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -29,12 +31,14 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./app_v2:/app/app_v2
+      - ../../backend/src:/app/backend/src
     restart: unless-stopped
 
   # 🧠 AI Chatbot (Streamlit)
   chatbot:
-    build: .
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
     ports:
       - "8501:8501"
     environment:
@@ -42,9 +46,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["streamlit", "run", "agent/chat/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    command: ["streamlit", "run", "backend/src/agents/chat/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
     volumes:
-      - ./agent:/app/agent
+      - ../../backend/src:/app/backend/src
     restart: unless-stopped
 
 volumes:

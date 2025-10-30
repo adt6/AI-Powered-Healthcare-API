@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app_v2.routes import (
+from api.v2.routes import (
     condition_v2,
     encounter_v2,
     observation_v2,

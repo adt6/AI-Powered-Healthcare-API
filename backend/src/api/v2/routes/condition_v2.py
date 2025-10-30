@@ -4,9 +4,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app_v2.database import get_db
-from app_v2.models.condition import ConditionV2
-from app_v2.schemas.condition import ConditionCreate, ConditionRead, ConditionUpdate
+from api.v2.database import get_db
+from api.v2.models.condition import ConditionV2
+from api.v2.schemas.condition import ConditionCreate, ConditionRead, ConditionUpdate
 
 router = APIRouter(prefix="/conditions", tags=["conditions v2"])
 

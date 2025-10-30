@@ -1,5 +1,5 @@
-from app_v2.database import Base, engine
-from app_v2.models import (
+from api.v2.database import Base, engine
+from api.v2.models import (
     ConditionV2,
     EncounterV2,
     ObservationV2,

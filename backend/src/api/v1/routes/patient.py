@@ -3,9 +3,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
-from app.models import Patient
-from app.schemas.patient import PatientCreate, PatientResponse, PatientUpdate
+from api.v1.database import SessionLocal
+from api.v1.models import Patient
+from api.v1.schemas.patient import PatientCreate, PatientResponse, PatientUpdate
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 

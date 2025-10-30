@@ -1,7 +1,7 @@
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from api.v1.database import Base
 
 
 class Condition(Base):

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Date, Integer, String
 
-from app.database import Base
+from api.v1.database import Base
 
 
 class Patient(Base):

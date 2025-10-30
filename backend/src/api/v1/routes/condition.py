@@ -3,9 +3,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
-from app.models import Condition
-from app.schemas.condition import ConditionCreate, ConditionResponse
+from api.v1.database import SessionLocal
+from api.v1.models import Condition
+from api.v1.schemas.condition import ConditionCreate, ConditionResponse
 
 router = APIRouter(prefix="/conditions", tags=["conditions"])
 

@@ -3,9 +3,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
-from app.models import Encounter
-from app.schemas.encounter import EncounterCreate, EncounterResponse
+from api.v1.database import SessionLocal
+from api.v1.models import Encounter
+from api.v1.schemas.encounter import EncounterCreate, EncounterResponse
 
 router = APIRouter(prefix="/encounters", tags=["encounters"])
 

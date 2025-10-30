@@ -15,9 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import agent configuration
-from agent import agent_config
+from agents import agent_config
 
-from agent.agent_factory import create_assistant
+from agents.agent_factory import create_assistant
 
 # Configure Streamlit page
 st.set_page_config(
@@ -264,7 +264,7 @@ def display_sidebar():
         st.header("🤖 AI Model Selection")
 
         # Import agent config for model options
-        from agent import agent_config
+        from agents import agent_config
 
         model_options = {
             "Llama 3.3 70B (Groq)": agent_config.LLAMA_GROQ_LLM_TYPE,
@@ -404,7 +404,7 @@ def display_sidebar():
         if st.button("🔍 Test Agent Loading", use_container_width=True):
             try:
                 with st.spinner("Testing agent loading..."):
-                    from agent.agent_factory import create_assistant
+                    from agents.agent_factory import create_assistant
 
                     test_agent = create_assistant()
                     st.success("✅ Agent test successful!")

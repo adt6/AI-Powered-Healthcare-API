@@ -1,8 +1,8 @@
 import json
 from datetime import date
 
-from app.database import SessionLocal
-from app.models import Condition, Encounter, Patient, Practitioner
+from api.v1.database import SessionLocal
+from api.v1.models import Condition, Encounter, Patient, Practitioner
 
 # Create DB session
 db = SessionLocal()

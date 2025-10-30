@@ -1,7 +1,7 @@
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app_v2.database import Base
+from api.v2.database import Base
 
 
 class ObservationV2(Base):
