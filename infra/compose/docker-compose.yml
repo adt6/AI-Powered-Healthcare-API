@@ -46,9 +46,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["streamlit", "run", "backend/src/agents/chat/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    command: ["streamlit", "run", "frontend/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
     volumes:
       - ../../backend/src:/app/backend/src
+      - ../../frontend:/app/frontend
     restart: unless-stopped
 
 volumes:

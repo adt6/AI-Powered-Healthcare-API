@@ -66,8 +66,8 @@ def main():
     if not check_env_file():
         sys.exit(1)
 
-    # Get the path to the Streamlit app
-    app_path = Path(__file__).parent / "backend" / "src" / "agents" / "chat" / "streamlit_app.py"
+    # Get the path to the Streamlit app now located in frontend/
+    app_path = Path(__file__).parent / "frontend" / "streamlit_app.py"
 
     if not app_path.exists():
         print(f"❌ Streamlit app not found at {app_path}")
@@ -81,6 +81,10 @@ def main():
 
     try:
         # Run Streamlit
+        env = os.environ.copy()
+        # Ensure backend modules are importable when running from frontend/
+        backend_src = str(Path(__file__).parent / "backend" / "src")
+        env["PYTHONPATH"] = backend_src + (":" + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
         subprocess.run(
             [
                 sys.executable,
@@ -92,7 +96,8 @@ def main():
                 "8501",
                 "--server.address",
                 "localhost",
-            ]
+            ],
+            env=env,
         )
     except KeyboardInterrupt:
         print("\n👋 Chatbot stopped. Goodbye!")
