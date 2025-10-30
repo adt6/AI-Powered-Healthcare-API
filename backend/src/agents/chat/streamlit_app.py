@@ -17,6 +17,8 @@ load_dotenv()
 # Import agent configuration
 from agent import agent_config
 
+from agent.agent_factory import create_assistant
+
 # Configure Streamlit page
 st.set_page_config(
     page_title="Clinical AI Assistant",
@@ -146,9 +148,9 @@ def load_agent(model_type=None):
             with st.spinner(
                 f"Loading AI agent with {effective_model_type or 'default'} model..."
             ):
-                from agent.agent_factory import create_assistant
+                
 
-                st.session_state.agent = create_assistant(effective_model_type)
+                st.session_state.agent = create_assistant(effective_model_type) # creates a new agent instance
                 st.session_state.selected_model = effective_model_type
                 st.success(
                     f"✅ AI agent loaded successfully with {effective_model_type or 'default'} model!"

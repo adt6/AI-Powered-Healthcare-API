@@ -38,7 +38,7 @@ def load_and_format_instructions() -> str:
 def get_llm(model_type=None):
     """
     Create and configure the LLM (Language Model) based on model_type or DEFAULT_LLM_TYPE.
-    This is the "brain" of our AI assistant.
+    This is the "brain" of the AI assistant.
 
     Args:
         model_type (str, optional): The type of model to use. If None, uses DEFAULT_LLM_TYPE.
