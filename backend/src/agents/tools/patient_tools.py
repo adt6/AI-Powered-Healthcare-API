@@ -19,9 +19,14 @@ from .base_tools import (
 def get_patient_info(patient_identifier: str) -> str:
     """
     Get detailed information about a specific patient by their ID or identifier.
+    
+    Use this tool when the user asks for patient information and provides a patient ID.
+    This includes queries about patient details, demographics, or basic information.
+    
+    Always use this tool immediately when a patient ID is mentioned - do not ask for more information.
 
     Args:
-        patient_identifier: The patient ID (integer) or identifier (UUID/MRN)
+        patient_identifier: The patient ID as a string (e.g., "2", "3", "123") or identifier (UUID/MRN)
 
     Returns:
         Formatted patient information including name, birth date, gender, and ID
@@ -67,21 +72,19 @@ def search_patients(
     limit: int = 20,
 ) -> str:
     """
-    Search for patients based on various criteria.
+    Search for patients based on various criteria such as name, birth date, or gender.
+
+    Use this tool when the user wants to find patients by name or other demographic information.
 
     Args:
-        first_name: Patient's first name (partial match) - pass only the name value, e.g. "Maxwell782"
-        last_name: Patient's last name (partial match) - pass only the name value, e.g. "Koepp521"
-        birth_date: Patient's birth date (YYYY-MM-DD format)
+        first_name: Patient's first name (partial match) - pass only the name value
+        last_name: Patient's last name (partial match) - pass only the name value
+        birth_date: Patient's birth date in YYYY-MM-DD format
         gender: Patient's gender (male, female, other, unknown)
         limit: Maximum number of results to return (default: 20, max: 100)
 
     Returns:
         List of patients matching the search criteria
-
-    Example usage:
-        search_patients(first_name="Maxwell782")
-        search_patients(last_name="Koepp521")
     """
     try:
         # Clean input parameters - remove any parameter formatting
@@ -173,9 +176,12 @@ def search_patients(
 def get_patient_conditions(patient_identifier: str) -> str:
     """
     Get all medical conditions for a specific patient.
+    
+    Use this tool when the user asks about a patient's medical conditions, diagnoses, or health problems.
+    Call immediately when a patient ID and "conditions" are mentioned together.
 
     Args:
-        patient_identifier: The patient ID (integer) or identifier (UUID/MRN)
+        patient_identifier: The patient ID as a string (e.g., "2", "3", "123") or identifier (UUID/MRN)
 
     Returns:
         List of conditions associated with the patient
@@ -192,12 +198,7 @@ def get_patient_conditions(patient_identifier: str) -> str:
         elif clean_identifier.startswith("'") and clean_identifier.endswith("'"):
             clean_identifier = clean_identifier[1:-1]
 
-        # First, get the patient to find their integer ID
-        patient_info = get_patient_info(clean_identifier)
-        if "Error" in patient_info:
-            return f"Cannot find patient with identifier: {clean_identifier}"
-
-        # Extract patient ID from the response (we need to get the actual patient data)
+        # Get patient ID - use API directly, don't call other tools
         if clean_identifier.isdigit():
             patient_id = int(clean_identifier)
         else:
@@ -235,9 +236,12 @@ def get_patient_conditions(patient_identifier: str) -> str:
 def get_patient_encounters(patient_identifier: str) -> str:
     """
     Get all medical encounters for a specific patient.
+    
+    Use this tool when the user asks about a patient's visits, appointments, hospital stays, or encounters.
+    Call immediately when a patient ID and "encounters", "visits", or "appointments" are mentioned.
 
     Args:
-        patient_identifier: The patient ID (integer) or identifier (UUID/MRN)
+        patient_identifier: The patient ID as a string (e.g., "2", "3", "123") or identifier (UUID/MRN)
 
     Returns:
         List of encounters associated with the patient
@@ -299,16 +303,58 @@ def get_patient_summary(patient_identifier: str) -> str:
         if "=" in clean_identifier:
             clean_identifier = clean_identifier.split("=")[1].strip()
 
-        # Get patient basic info
-        patient_info = get_patient_info(clean_identifier)
-        if "Error" in patient_info:
-            return patient_info
+        # Remove quotes if present
+        if clean_identifier.startswith('"') and clean_identifier.endswith('"'):
+            clean_identifier = clean_identifier[1:-1]
+        elif clean_identifier.startswith("'") and clean_identifier.endswith("'"):
+            clean_identifier = clean_identifier[1:-1]
 
-        # Get conditions
-        conditions_info = get_patient_conditions(clean_identifier)
+        # Get patient ID - use API directly
+        if clean_identifier.isdigit():
+            patient_id = int(clean_identifier)
+            patient_response = api_client.get(f"/patients/{clean_identifier}")
+        else:
+            # Search for patient by identifier
+            patient_response = api_client.get(
+                "/patients", params={"identifier": clean_identifier}
+            )
+            if isinstance(patient_response, list):
+                if len(patient_response) == 0:
+                    return f"No patient found with identifier: {clean_identifier}"
+                patient_response = patient_response[0]
+            patient_id = patient_response.get("id")
 
-        # Get encounters
-        encounters_info = get_patient_encounters(clean_identifier)
+        if "error" in patient_response:
+            return f"Error retrieving patient {clean_identifier}: {patient_response['error']}"
+
+        # Get patient basic info (formatted)
+        patient_info = format_patient_summary(patient_response)
+
+        # Get conditions - use API directly
+        conditions_response = api_client.get(f"/conditions", params={"patient_id": patient_id})
+        if isinstance(conditions_response, dict) and "error" in conditions_response:
+            conditions_info = f"Error retrieving conditions: {conditions_response['error']}"
+        else:
+            conditions = conditions_response if isinstance(conditions_response, list) else []
+            if not conditions:
+                conditions_info = f"No conditions found for patient {clean_identifier}."
+            else:
+                conditions_info = f"Patient {clean_identifier} has {len(conditions)} condition(s):\n\n"
+                for i, condition in enumerate(conditions, 1):
+                    conditions_info += f"{i}. {format_condition_summary(condition)}\n\n"
+
+        # Get encounters - use API directly
+        encounters_response = api_client.get(f"/encounters", params={"patient_id": patient_id})
+        if isinstance(encounters_response, dict) and "error" in encounters_response:
+            encounters_info = f"Error retrieving encounters: {encounters_response['error']}"
+        else:
+            encounters = encounters_response if isinstance(encounters_response, list) else []
+            if not encounters:
+                encounters_info = f"No encounters found for patient {clean_identifier}."
+            else:
+                encounters_info = f"Patient {clean_identifier} has {len(encounters)} encounter(s):\n\n"
+                for i, encounter in enumerate(encounters, 1):
+                    encounters_info += f"{i}. {format_encounter_summary(encounter)}\n\n"
 
         # Combine all information
         result = f"=== PATIENT SUMMARY ===\n\n"

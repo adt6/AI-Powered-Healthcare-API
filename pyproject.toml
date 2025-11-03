@@ -1,3 +1,40 @@
+[project]
+name = "building-api"
+version = "1.0.0"
+description = "Healthcare API Backend"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "pydantic",
+    "python-dotenv",
+    # LangChain ecosystem - pin major versions to prevent breaking changes
+    "langchain>=1.0.0,<2.0.0",           # Allow 1.x updates, block 2.0 breaking changes
+    "langchain-openai>=1.0.0,<2.0.0",   # OpenAI integration
+    "langchain-community>=0.4.0,<0.5.0", # Community integrations (still 0.x)
+    "langchain-groq>=1.0.0,<2.0.0",     # Groq integration
+    "langchain-google-genai>=3.0.0,<4.0.0", # Google Gemini integration
+    "langgraph>=1.0.0,<2.0.0",          # LangGraph for agent orchestration
+    # Other dependencies
+    "streamlit",
+    "requests",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "flake8",
+    "black",
+    "isort",
+    "mypy",
+    "safety",
+    "bandit",
+]
+
 [tool.black]
 line-length = 88
 target-version = ['py311']

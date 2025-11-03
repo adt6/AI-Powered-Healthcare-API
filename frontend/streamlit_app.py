@@ -103,6 +103,8 @@ def initialize_session_state():
         st.session_state.agent_loading_attempted = False
     if "selected_model" not in st.session_state:
         st.session_state.selected_model = None
+    if "thread_id" not in st.session_state:
+        st.session_state.thread_id = "default_thread"
 
 
 def check_api_status():
@@ -430,7 +432,7 @@ def display_chat_history():
 
 
 def process_message(prompt):
-    """Process a user message and generate AI response."""
+    """Process a user message and generate AI response using LangChain v1.0 messages format."""
     # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
 
@@ -445,42 +447,73 @@ def process_message(prompt):
                 st.session_state.selected_model = current_model
             agent = load_agent(current_model)
             if agent:
-                import sys
-
-                print(
-                    f"🤖 STREAMLIT: Invoking agent with prompt: {prompt[:50]}...",
-                    file=sys.stderr,
-                )
-                print("=" * 80, file=sys.stderr)
-                print("🤖 AGENT THINKING PROCESS:", file=sys.stderr)
-                print("=" * 80, file=sys.stderr)
-                response = agent.invoke({"input": prompt})
-                print("=" * 80, file=sys.stderr)
-                print("✅ AGENT THINKING COMPLETE", file=sys.stderr)
-                print("=" * 80, file=sys.stderr)
-
-                # Show intermediate steps if available
-                if "intermediate_steps" in response:
-                    print(
-                        f"🔍 INTERMEDIATE STEPS: {len(response['intermediate_steps'])} steps",
-                        file=sys.stderr,
-                    )
-                    for i, step in enumerate(response["intermediate_steps"]):
-                        action, observation = step
-                        print(f"  Step {i+1}:", file=sys.stderr)
-                        print(
-                            f"    🤔 Thought: {action.log.split('Action:')[0].strip()}",
-                            file=sys.stderr,
-                        )
-                        print(f"    🛠️  Action: {action.tool}", file=sys.stderr)
-                        print(f"    📝 Input: {action.tool_input}", file=sys.stderr)
-                        print(
-                            f"    👀 Observation: {observation[:100]}...",
-                            file=sys.stderr,
-                        )
-
-                ai_response = response["output"]
-                print(f"✅ STREAMLIT: Agent response received", file=sys.stderr)
+                from langchain_core.messages import HumanMessage
+                
+                # Use LangChain v1.0 format: {"messages": [HumanMessage(...)]}
+                messages_input = [HumanMessage(content=prompt)]
+                
+                # Configure thread ID for conversation history
+                config = {"configurable": {"thread_id": st.session_state.thread_id}}
+                
+                # Invoke the graph directly with messages format
+                response = agent.invoke({"messages": messages_input}, config)
+                
+                # Extract output from messages list
+                # LangGraph returns {"messages": [HumanMessage, AIMessage, ToolMessage, AIMessage, ...]}
+                messages = response.get("messages", [])
+                ai_response = None
+                
+                # Find the last AIMessage with content (final response)
+                # Skip messages with tool_calls - those are intermediate steps
+                for msg in reversed(messages):
+                    # Check if this is an AIMessage (assistant response)
+                    if hasattr(msg, '__class__') and msg.__class__.__name__ == 'AIMessage':
+                        # Skip if it has tool calls (this is when AI decides to call a tool)
+                        if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                            continue  # This is an intermediate step, not final response
+                        
+                        # Get the content
+                        if hasattr(msg, 'content') and msg.content:
+                            content = msg.content
+                            
+                            # Handle different content formats
+                            if isinstance(content, list) and len(content) > 0:
+                                # Gemini format: [{'type': 'text', 'text': '...'}]
+                                text_parts = []
+                                for block in content:
+                                    if isinstance(block, dict):
+                                        if block.get("type") == "text" and "text" in block:
+                                            text_parts.append(block["text"])
+                                        elif "text" in block:
+                                            text_parts.append(str(block["text"]))
+                                    elif isinstance(block, str):
+                                        text_parts.append(block)
+                                if text_parts:
+                                    ai_response = "\n".join(text_parts)
+                                    break
+                            elif isinstance(content, str) and content.strip():
+                                # Groq/OpenAI format: plain string
+                                ai_response = content
+                                break
+                    
+                    # Also check for other message types with content as fallback
+                    elif hasattr(msg, 'content') and msg.content:
+                        content = msg.content
+                        if isinstance(content, str) and content.strip():
+                            ai_response = content
+                            break
+                
+                # Fallback if no response found
+                if ai_response is None:
+                    if messages:
+                        # Try to get string representation of last message
+                        last_msg = messages[-1]
+                        if hasattr(last_msg, 'content'):
+                            ai_response = str(last_msg.content) if last_msg.content else "No response generated"
+                        else:
+                            ai_response = str(last_msg)
+                    else:
+                        ai_response = "❌ No response generated - empty messages"
             else:
                 ai_response = (
                     "❌ AI agent is not available. Please check the configuration."

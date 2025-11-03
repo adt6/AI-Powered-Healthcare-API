@@ -7,10 +7,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from langchain import hub
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import PromptTemplate
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import MemorySaver
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 
@@ -67,23 +65,34 @@ def get_llm(model_type=None):
     elif selected_model_type == agent_config.LLAMA_GROQ_LLM_TYPE:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("Please set GROQ_API_KEY environment variable.")
+            raise ValueError("Please set GROQ_API_KEY environment variable. Current value: {}".format("(empty)" if api_key == "" else "(not set)"))
 
-        return ChatGroq(
-            model=agent_config.MODEL_ID_LLAMA_GROQ,  # llama3-70b-8192
+        # Ensure api_key is a string and not empty
+        api_key = str(api_key).strip()
+        if not api_key:
+            raise ValueError("GROQ_API_KEY is empty. Please set a valid API key.")
+
+        llm = ChatGroq(
+            model=agent_config.MODEL_ID_LLAMA_GROQ,  # llama-3.3-70b-versatile
             temperature=0.1,
             api_key=api_key,
         )
+        return llm
 
     elif selected_model_type == agent_config.MIXTRAL_LLM_TYPE:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("Please set GROQ_API_KEY environment variable.")
+            raise ValueError("Please set GROQ_API_KEY environment variable. Current value: {}".format("(empty)" if api_key == "" else "(not set)"))
+
+        # Ensure api_key is a string and not empty
+        api_key = str(api_key).strip()
+        if not api_key:
+            raise ValueError("GROQ_API_KEY is empty. Please set a valid API key.")
 
         return ChatGroq(
             model=agent_config.MODEL_ID_MIXTRAL_GROQ,  # mixtral-8x7b-32768
             temperature=0.1,
-            api_key=api_key,
+            api_key=api_key,  # ChatGroq uses api_key parameter
         )
 
     elif selected_model_type == agent_config.HAIKU_LLM_TYPE:
@@ -97,21 +106,9 @@ def get_llm(model_type=None):
         if not api_key:
             raise ValueError("Please set GEMINI_API_KEY environment variable.")
 
-        import sys
-
-        print(
-            f"\n🤖 DEBUG: Creating Gemini LLM with model: {agent_config.MODEL_ID_GEMINI}",
-            file=sys.stderr,
-        )
-
         # Import ChatGoogleGenerativeAI for Gemini support
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
-
-            print(
-                "✅ DEBUG: Successfully imported ChatGoogleGenerativeAI",
-                file=sys.stderr,
-            )
         except ImportError:
             raise ImportError(
                 "Please install langchain-google-genai: pip install langchain-google-genai"
@@ -122,8 +119,6 @@ def get_llm(model_type=None):
             temperature=0.1,
             google_api_key=api_key,
         )
-
-        print(f"✅ DEBUG: Gemini LLM created successfully\n", file=sys.stderr)
         return llm
 
     else:
@@ -132,7 +127,7 @@ def get_llm(model_type=None):
         )
 
 
-def create_assistant(model_type=None) -> AgentExecutor:
+def create_assistant(model_type=None):
     """
     Main factory method - creates a fully configured AI assistant.
     This combines all components: instructions, LLM, tools, and prompts.
@@ -144,6 +139,7 @@ def create_assistant(model_type=None) -> AgentExecutor:
     instructions = load_and_format_instructions()
 
     # Step 2: Create LLM (the AI brain)
+    selected_model_type = model_type or agent_config.DEFAULT_LLM_TYPE
     llm = get_llm(model_type)
 
     # Step 3: Get tools (functions to call your API)
@@ -165,88 +161,46 @@ def create_assistant(model_type=None) -> AgentExecutor:
         get_patient_summary,
     ]
 
-    import sys
 
-    print(f"🛠️ DEBUG: Loaded {len(tools)} tools for agent", file=sys.stderr)
-    for i, tool in enumerate(tools, 1):
-        print(f"   {i}. {tool.name}: {tool.description[:50]}...", file=sys.stderr)
-
-    # Step 4: Create prompt template (how to format conversations)
-    # Use the standard ReAct prompt template
-    prompt = hub.pull("hwchase17/react")
-
-    # Add our clinical instructions to the prompt
+    # Step 4: Prepare clinical instructions as system prompt
     clinical_instructions = f"""
 {instructions}
 
-You are a clinical AI assistant that helps healthcare professionals access patient information.
-Use the available tools to retrieve and format patient data in a professional, clinical manner.
+You are a clinical AI assistant that helps healthcare professionals access patient information. Use the available tools to retrieve patient data when needed.
 
-CRITICAL INSTRUCTION: When you receive patient information from tools, you MUST ALWAYS 
-provide a natural, conversational summary in paragraph form. NEVER display the raw 
-structured data with headers like "PATIENT INFORMATION" or "CONTACT INFORMATION". 
+When a user asks about a patient, use the appropriate tool to get the information. For example:
+- If a patient ID is mentioned (like "patient ID 2" or "patient 2"), use the get_patient_info tool with that ID
+- If asking about conditions for a patient, use the get_patient_conditions tool
+- If asking about encounters, use the get_patient_encounters tool
+- If searching for a patient by name, use the search_patients tool
 
-Instead, write a flowing summary like: "John Doe is a 45-year-old male patient with ID 123..."
+Tool parameters:
+- Patient IDs should be passed as strings (e.g., "2", "3", "123")
+- Use the patient_identifier parameter for patient ID lookups
+- Use first_name or last_name parameters for patient searches
 
-ALWAYS summarize patient data in natural language - this is mandatory for all patient queries.
+After receiving data from tools, provide a natural, conversational summary of the information. Write flowing summaries like "John Doe is a 45-year-old male patient with ID 123..." rather than displaying raw structured data.
 
-MEMORY INSTRUCTIONS:
-- You have access to conversation history to understand context
-- Use previous messages to understand follow-up questions
-- If a user asks "What are their conditions?" after discussing a patient, you know which patient they mean
-- Maintain context throughout the conversation
+You have access to conversation history, so you can understand context. If a user asks "What are their conditions?" after discussing a patient, you know which patient they mean.
 
-IMPORTANT SEARCH GUIDELINES:
-- When searching for patients by name, if given a single name like "Robert854", use ONLY the first_name parameter
-- Do NOT split single names into first_name and last_name unless explicitly told to do so
-- For single names, use: search_patients(first_name="Robert854")
-- Only use both first_name and last_name when the user explicitly provides both parts
-- CRITICAL: When calling tools, pass parameter values correctly:
-  * Use first_name="Maxwell782" NOT first_name="first_name=Maxwell782"
-  * Use first_name="Robert854", last_name="Botsford977" NOT first_name="first_name=Robert854, last_name=Botsford977"
-  * Each parameter should be passed separately, not concatenated into one string
-- For patient tools, use: patient_identifier=2 NOT patient_identifier="2" (avoid quotes around numbers)
-
+If a patient ID or identifier is already provided in the user's query, use it immediately - don't ask for it again.
 """
 
-    # Update the prompt template with our clinical instructions and memory
-    prompt.template = clinical_instructions + prompt.template
+    # Step 5: Create conversation memory (using MemorySaver for LangGraph)
+    memory = MemorySaver()
 
-    # Add chat history to the prompt template
-    if "chat_history" not in prompt.template:
-        prompt.template = prompt.template.replace(
-            "{input}",
-            "Previous conversation:\n{chat_history}\n\nCurrent question: {input}",
-        )
+    # Step 6: Create system prompt (clinical instructions)
+    system_prompt = clinical_instructions.strip()
 
-    # Step 5: Create conversation memory
-    print(f"🧠 DEBUG: Creating conversation memory", file=sys.stderr)
-    memory = ConversationBufferMemory(
-        memory_key="chat_history", return_messages=True, output_key="output"
-    )
-    print(f"🧠 DEBUG: Memory created with key: chat_history", file=sys.stderr)
-
-    # Step 6: Create the agent (combines LLM + tools + prompt)
-    print(
-        f"🤖 DEBUG: Creating ReAct agent with {model_type or 'default'} model",
-        file=sys.stderr,
-    )
-    agent = create_react_agent(llm=llm, tools=tools, prompt=prompt)
-
-    # Step 7: Create agent executor (handles the conversation flow)
-    # agent_executor is essentially a conversational AI interface that you can ask questions to, and it will use your healthcare API tools to find answers!
-    print(
-        f"🔄 DEBUG: Creating AgentExecutor with memory and verbose=True",
-        file=sys.stderr,
-    )
-    agent_executor = AgentExecutor(
-        agent=agent,
+    # Step 7: Create the agent using LangChain v1.0 API
+    # create_agent returns a compiled graph that handles the conversation flow
+    # It automatically binds tools to the LLM
+    agent_graph = create_agent(
+        model=llm,
         tools=tools,
-        memory=memory,  # Add conversation memory
-        verbose=True,  # Show thinking process
-        max_iterations=20,  # Max steps to answer (increased for complex queries)
-        handle_parsing_errors=True,  # Handle output parsing errors gracefully
-        return_intermediate_steps=True,  # Return intermediate steps for debugging
+        system_prompt=system_prompt,
+        checkpointer=memory,  # Use MemorySaver for conversation history
+        debug=False,
     )
-    print(f"✅ DEBUG: AgentExecutor created successfully", file=sys.stderr)
-    return agent_executor
+    
+    return agent_graph
