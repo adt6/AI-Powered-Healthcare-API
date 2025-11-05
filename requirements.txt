@@ -1,28 +1,20 @@
+# Core FastAPI dependencies
 fastapi
 uvicorn
 sqlalchemy
 psycopg2-binary
 pydantic
 python-dotenv
-pytest
-pytest-cov
 
-# Code quality tools
-flake8
-black
-isort
-mypy
+# LangChain ecosystem - pin major versions to prevent breaking changes
+langchain>=1.0.0,<2.0.0
+langchain-openai>=1.0.0,<2.0.0
+langchain-community>=0.4.0,<0.5.0
+langchain-groq>=1.0.0,<2.0.0
+langchain-google-genai>=3.0.0,<4.0.0
+langgraph>=1.0.0,<2.0.0
 
-# Security tools
-safety
-bandit
-
-# AI Agent dependencies
-langchain
-langchain-openai
-langchain-community
-langchain-groq
-langchain-google-genai
+# Other dependencies
 streamlit
 requests
 pyyaml
