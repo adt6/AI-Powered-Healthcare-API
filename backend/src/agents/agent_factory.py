@@ -163,36 +163,14 @@ def create_assistant(model_type=None):
 
 
     # Step 4: Prepare clinical instructions as system prompt
-    clinical_instructions = f"""
-{instructions}
-
-You are a clinical AI assistant that helps healthcare professionals access patient information. Use the available tools to retrieve patient data when needed.
-
-When a user asks about a patient, use the appropriate tool to get the information. For example:
-- If a patient ID is mentioned (like "patient ID 2" or "patient 2"), use the get_patient_info tool with that ID
-- If asking about conditions for a patient, use the get_patient_conditions tool
-- If asking about encounters, use the get_patient_encounters tool
-- If searching for a patient by name, use the search_patients tool
-
-Tool parameters:
-- Patient IDs should be passed as strings (e.g., "2", "3", "123")
-- Use the patient_identifier parameter for patient ID lookups
-- Use first_name or last_name parameters for patient searches
-
-After receiving data from tools, provide a natural, conversational summary of the information. Write flowing summaries like "John Doe is a 45-year-old male patient with ID 123..." rather than displaying raw structured data.
-
-You have access to conversation history, so you can understand context. If a user asks "What are their conditions?" after discussing a patient, you know which patient they mean.
-
-If a patient ID or identifier is already provided in the user's query, use it immediately - don't ask for it again.
-"""
+    # Instructions are loaded from clinical_instructions.md file
+    # The file already contains all necessary instructions, so we use it directly
+    system_prompt = instructions.strip()
 
     # Step 5: Create conversation memory (using MemorySaver for LangGraph)
     memory = MemorySaver()
 
-    # Step 6: Create system prompt (clinical instructions)
-    system_prompt = clinical_instructions.strip()
-
-    # Step 7: Create the agent using LangChain v1.0 API
+    # Step 6: Create the agent using LangChain v1.0 API
     # create_agent returns a compiled graph that handles the conversation flow
     # It automatically binds tools to the LLM
     agent_graph = create_agent(
