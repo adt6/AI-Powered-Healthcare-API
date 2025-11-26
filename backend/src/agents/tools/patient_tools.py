@@ -3,16 +3,21 @@ Patient-related tools for the clinical AI agent.
 These tools allow the agent to interact with patient data from the FHIR API.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from langchain.tools import tool
 
 from .base_tools import (
     api_client,
+    format_condition_summary,
+    format_encounter_summary,
     format_list_summary,
     format_patient_summary,
-    format_patient_summary_html,
 )
+
+# Configure logging for tool calls (logging already configured in base_tools)
+logger = logging.getLogger(__name__)
 
 
 @tool
@@ -31,6 +36,7 @@ def get_patient_info(patient_identifier: str) -> str:
     Returns:
         Formatted patient information including name, birth date, gender, and ID
     """
+    logger.info(f"🔧 TOOL CALLED: get_patient_info(patient_identifier='{patient_identifier}')")
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -86,6 +92,7 @@ def search_patients(
     Returns:
         List of patients matching the search criteria
     """
+    logger.info(f"🔧 TOOL CALLED: search_patients(first_name='{first_name}', last_name='{last_name}', birth_date='{birth_date}', gender='{gender}', limit={limit})")
     try:
         # Clean input parameters - remove any parameter formatting
         clean_first_name = first_name.strip() if first_name else None
@@ -186,6 +193,7 @@ def get_patient_conditions(patient_identifier: str) -> str:
     Returns:
         List of conditions associated with the patient
     """
+    logger.info(f"🔧 TOOL CALLED: get_patient_conditions(patient_identifier='{patient_identifier}')")
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -246,6 +254,7 @@ def get_patient_encounters(patient_identifier: str) -> str:
     Returns:
         List of encounters associated with the patient
     """
+    logger.info(f"🔧 TOOL CALLED: get_patient_encounters(patient_identifier='{patient_identifier}')")
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -297,6 +306,7 @@ def get_patient_summary(patient_identifier: str) -> str:
     Returns:
         Complete patient summary with all related information
     """
+    logger.info(f"🔧 TOOL CALLED: get_patient_summary(patient_identifier='{patient_identifier}')")
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -368,33 +378,6 @@ def get_patient_summary(patient_identifier: str) -> str:
         return f"Unexpected error creating patient summary for {patient_identifier}: {str(e)}"
 
 
-# Helper function for condition formatting (imported from base_tools)
-def format_condition_summary(condition_data: Dict[str, Any]) -> str:
-    """Format condition data into a human-readable summary."""
-    if "error" in condition_data:
-        return f"Error retrieving condition: {condition_data['error']}"
-
-    code = condition_data.get("code", "Unknown")
-    display = condition_data.get("display", "Unknown")
-    status = condition_data.get("status", "Unknown")
-    onset_date = condition_data.get("onset_date", "Unknown")
-
-    return f"Condition: {display} ({code})\nStatus: {status}\nOnset Date: {onset_date}"
-
-
-# Helper function for encounter formatting (imported from base_tools)
-def format_encounter_summary(encounter_data: Dict[str, Any]) -> str:
-    """Format encounter data into a human-readable summary."""
-    if "error" in encounter_data:
-        return f"Error retrieving encounter: {encounter_data['error']}"
-
-    status = encounter_data.get("status", "Unknown")
-    start_time = encounter_data.get("start_time", "Unknown")
-    class_code = encounter_data.get("class_code", "Unknown")
-
-    return f"Encounter: {class_code}\nStatus: {status}\nStart Time: {start_time}"
-
-
 @tool
 def get_patient_observations(patient_identifier: str) -> str:
     """
@@ -406,6 +389,7 @@ def get_patient_observations(patient_identifier: str) -> str:
     Returns:
         str: Formatted list of patient observations
     """
+    logger.info(f"🔧 TOOL CALLED: get_patient_observations(patient_identifier='{patient_identifier}')")
     try:
         # Clean the patient identifier
         clean_identifier = patient_identifier.strip()
@@ -443,18 +427,143 @@ def get_patient_observations(patient_identifier: str) -> str:
         )
 
 
+@tool
+def get_patient_observation_by_type(
+    patient_identifier: str,
+    observation_type: str,
+) -> str:
+    """
+    Get specific medical observations for a patient by observation type.
+    
+    Use this tool when the user asks for a specific measurement or observation type.
+    Examples of when to use this:
+    - "What is patient 3's hemoglobin level?" → observation_type="hemoglobin"
+    - "Show me blood pressure readings for patient 3" → observation_type="blood pressure"
+    - "What are the cholesterol values?" → observation_type="cholesterol"
+    - "Get patient 3's glucose levels" → observation_type="glucose"
+    - "Show me BMI measurements" → observation_type="BMI" or "body mass index"
+    
+    This tool filters observations to show only the requested type, making it much more useful
+    than listing all observations when clinicians need specific information.
+    
+    Args:
+        patient_identifier: The patient ID as a string (e.g., "3", "123") or identifier (UUID/MRN)
+        observation_type: The type of observation to filter (e.g., "hemoglobin", "blood pressure", 
+                         "cholesterol", "glucose", "BMI", "weight", "temperature"). 
+                         Use common clinical terms - the system will match partial names.
+    
+    Returns:
+        Formatted list of matching observations with values, dates, and status
+    """
+    logger.info(
+        f"🔧 TOOL CALLED: get_patient_observation_by_type(patient_identifier='{patient_identifier}', observation_type='{observation_type}')"
+    )
+    try:
+        # Clean the patient identifier
+        clean_identifier = patient_identifier.strip()
+        if "=" in clean_identifier:
+            clean_identifier = clean_identifier.split("=")[1].strip()
+
+        # Remove quotes if present
+        if clean_identifier.startswith('"') and clean_identifier.endswith('"'):
+            clean_identifier = clean_identifier[1:-1]
+        elif clean_identifier.startswith("'") and clean_identifier.endswith("'"):
+            clean_identifier = clean_identifier[1:-1]
+
+        # Clean observation type
+        clean_observation_type = observation_type.strip()
+        if clean_observation_type.startswith('"') and clean_observation_type.endswith('"'):
+            clean_observation_type = clean_observation_type[1:-1]
+        elif clean_observation_type.startswith("'") and clean_observation_type.endswith("'"):
+            clean_observation_type = clean_observation_type[1:-1]
+
+        # Get patient ID if identifier is not numeric
+        if clean_identifier.isdigit():
+            patient_id = int(clean_identifier)
+        else:
+            # Search for patient by identifier to get the integer ID
+            patient_response = api_client.get(
+                "/patients", params={"identifier": clean_identifier}
+            )
+            if isinstance(patient_response, list) and len(patient_response) > 0:
+                patient_id = patient_response[0].get("id")
+            else:
+                return f"No patient found with identifier: {clean_identifier}"
+
+        # Get filtered observations from API using code_display filter
+        observations_data = api_client.get(
+            "/observations",
+            params={
+                "patient_id": patient_id,
+                "code_display": clean_observation_type,
+            },
+        )
+
+        if not observations_data:
+            return (
+                f"No observations of type '{clean_observation_type}' found for patient {clean_identifier}. "
+                f"Try using more general terms like 'hemoglobin', 'blood pressure', 'cholesterol', etc."
+            )
+
+        # Format observations
+        formatted_observations = []
+        for i, observation in enumerate(observations_data, 1):
+            formatted_obs = format_observation_summary(observation)
+            formatted_observations.append(f"{i}. {formatted_obs}")
+
+        result = (
+            f"Patient {clean_identifier} has {len(observations_data)} {clean_observation_type} observation(s):\n\n"
+            + "\n".join(formatted_observations)
+        )
+
+        return result
+
+    except Exception as e:
+        return (
+            f"Error retrieving {observation_type} observations for patient {patient_identifier}: {str(e)}"
+        )
+
+
 # Helper function for observation formatting
 def format_observation_summary(observation_data: Dict[str, Any]) -> str:
     """Format observation data into a human-readable summary."""
     if "error" in observation_data:
         return f"Error retrieving observation: {observation_data['error']}"
 
-    observation_type = observation_data.get("observation_type", "Unknown")
-    value = observation_data.get("value", "Unknown")
-    unit = observation_data.get("unit", "")
-    date = observation_data.get("date", "Unknown")
+    # Use correct field names from API
+    code_display = observation_data.get("code_display", "Unknown")
+    code = observation_data.get("code", "")
     status = observation_data.get("status", "Unknown")
-
-    value_str = f"{value} {unit}".strip() if unit else str(value)
-
-    return f"Observation: {observation_type}\nValue: {value_str}\nDate: {date}\nStatus: {status}"
+    
+    # Handle both numeric and string values
+    value_quantity = observation_data.get("value_quantity")
+    value_string = observation_data.get("value_string")
+    value_unit = observation_data.get("value_unit", "")
+    
+    # Determine the value to display
+    if value_quantity is not None:
+        value_str = f"{value_quantity} {value_unit}".strip()
+    elif value_string:
+        value_str = value_string
+    else:
+        value_str = "No value recorded"
+    
+    # Format date
+    effective_time = observation_data.get("effective_time")
+    if effective_time:
+        if isinstance(effective_time, str):
+            date_str = effective_time
+        else:
+            # Handle datetime object
+            from datetime import datetime
+            if isinstance(effective_time, datetime):
+                date_str = effective_time.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                date_str = str(effective_time)
+    else:
+        date_str = "Date not available"
+    
+    # Format with code if available
+    code_info = f" ({code})" if code else ""
+    
+    return f"{code_display}{code_info}: {value_str} | {date_str} | {status}"

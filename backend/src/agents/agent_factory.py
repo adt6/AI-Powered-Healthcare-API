@@ -143,11 +143,12 @@ def create_assistant(model_type=None):
     llm = get_llm(model_type)
 
     # Step 3: Get tools (functions to call your API)
-    from .tools.patient_tools import (
+    from .tools import (
         get_patient_conditions,
         get_patient_encounters,
         get_patient_info,
         get_patient_observations,
+        get_patient_observation_by_type,
         get_patient_summary,
         search_patients,
     )
@@ -158,6 +159,7 @@ def create_assistant(model_type=None):
         get_patient_conditions,
         get_patient_encounters,
         get_patient_observations,
+        get_patient_observation_by_type,
         get_patient_summary,
     ]
 
@@ -178,7 +180,7 @@ def create_assistant(model_type=None):
         tools=tools,
         system_prompt=system_prompt,
         checkpointer=memory,  # Use MemorySaver for conversation history
-        debug=False,
+        debug=False,  # Enable debug mode to see tool calls
     )
     
     return agent_graph

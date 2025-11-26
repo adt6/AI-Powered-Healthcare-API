@@ -11,7 +11,10 @@ from typing import Any, Dict, List, Optional
 import requests
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,  # Changed from DEBUG to INFO to reduce verbose output
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -134,6 +137,7 @@ def format_patient_summary(patient_data: Dict[str, Any]) -> str:
     Returns:
         Formatted patient summary
     """
+    logger.debug(f"📝 INTERNAL FUNCTION CALLED: format_patient_summary()")
     if "error" in patient_data:
         return f"Error retrieving patient: {patient_data['error']}"
 
@@ -166,128 +170,40 @@ def format_patient_summary(patient_data: Dict[str, Any]) -> str:
     managing_org = patient_data.get("managing_organization_identifier", "Not assigned")
 
     # Format the complete summary with better spacing
-    result = f"**PATIENT INFORMATION**\n\n"
-    result += f"**Name:** {name}\n"
-    result += f"**ID:** {patient_id}\n"
-    result += f"**Medical Record Number:** {identifier}\n"
-    result += f"**Birth Date:** {birth_date}\n"
-    result += f"**Gender:** {gender}\n"
-    result += f"**Status:** {'Active' if active else 'Inactive'}\n"
+    # Handle deceased date conditionally (can't use backslash in nested f-string)
+    deceased_line = f"**Deceased Date:** {deceased_date}\n" if deceased_date != 'N/A' else ''
+    
+    return f"""**PATIENT INFORMATION**
 
-    if deceased_date != "N/A":
-        result += f"**Deceased Date:** {deceased_date}\n"
+**Name:** {name}
+**ID:** {patient_id}
+**Medical Record Number:** {identifier}
+**Birth Date:** {birth_date}
+**Gender:** {gender}
+**Status:** {'Active' if active else 'Inactive'}
+{deceased_line}**CONTACT INFORMATION**
 
-    result += f"\n**CONTACT INFORMATION**\n\n"
-    result += f"**Phone:** {phone}\n"
-    result += f"**Email:** {email}\n"
+**Phone:** {phone}
+**Email:** {email}
 
-    result += f"\n**ADDRESS**\n\n"
-    result += f"**Address:** {address_line}\n"
-    result += f"**City:** {city}\n"
-    result += f"**State:** {state}\n"
-    result += f"**Postal Code:** {postal_code}\n"
+**ADDRESS**
 
-    result += f"\n**DEMOGRAPHICS**\n\n"
-    result += f"**Marital Status:** {marital_status}\n"
-    result += f"**Language:** {language}\n"
-    result += f"**Race:** {race}\n"
-    result += f"**Ethnicity:** {ethnicity}\n"
+**Address:** {address_line}
+**City:** {city}
+**State:** {state}
+**Postal Code:** {postal_code}
 
-    result += f"\n**ORGANIZATIONAL**\n\n"
-    result += f"**Managing Organization:** {managing_org}\n"
+**DEMOGRAPHICS**
 
-    return result
+**Marital Status:** {marital_status}
+**Language:** {language}
+**Race:** {race}
+**Ethnicity:** {ethnicity}
 
+**ORGANIZATIONAL**
 
-def format_patient_summary_html(patient_data: Dict[str, Any]) -> str:
-    """
-    Format patient data into HTML for better display in Streamlit.
-
-    Args:
-        patient_data: Patient data from API
-
-    Returns:
-        HTML formatted patient summary
-    """
-    if "error" in patient_data:
-        return f"<div style='color: red;'>Error retrieving patient: {patient_data['error']}</div>"
-
-    # Basic Information
-    name = f"{patient_data.get('first_name', 'Unknown')} {patient_data.get('last_name', 'Unknown')}"
-    birth_date = patient_data.get("birth_date", "Unknown")
-    gender = patient_data.get("gender", "Unknown")
-    patient_id = patient_data.get("id", "Unknown")
-    identifier = patient_data.get("identifier", "Not assigned")
-
-    # Contact Information
-    phone = patient_data.get("phone", "Not provided")
-    email = patient_data.get("email", "Not provided")
-
-    # Address Information
-    address_line = patient_data.get("address_line", "Not provided")
-    city = patient_data.get("city", "Not provided")
-    state = patient_data.get("state", "Not provided")
-    postal_code = patient_data.get("postal_code", "Not provided")
-
-    # Demographics
-    marital_status = patient_data.get("marital_status", "Not specified")
-    language = patient_data.get("language", "Not specified")
-    race = patient_data.get("race", "Not specified")
-    ethnicity = patient_data.get("ethnicity", "Not specified")
-
-    # Medical Information
-    deceased_date = patient_data.get("deceased_date", "N/A")
-    active = patient_data.get("active", True)
-    managing_org = patient_data.get("managing_organization_identifier", "Not assigned")
-
-    # Create HTML with better styling
-    html = f"""
-    <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 10px 0; font-family: Arial, sans-serif;">
-        <h3 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px;">👤 Patient Information</h3>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-            <div>
-                <h4 style="color: #34495e; margin-bottom: 10px;">Basic Details</h4>
-                <p><strong>Name:</strong> {name}</p>
-                <p><strong>Patient ID:</strong> {patient_id}</p>
-                <p><strong>Medical Record #:</strong> {identifier}</p>
-                <p><strong>Birth Date:</strong> {birth_date}</p>
-                <p><strong>Gender:</strong> {gender}</p>
-                <p><strong>Status:</strong> <span style="color: {'#27ae60' if active else '#e74c3c'}">{'Active' if active else 'Inactive'}</span></p>
-                {f'<p><strong>Deceased Date:</strong> {deceased_date}</p>' if deceased_date != 'N/A' else ''}
-            </div>
-            
-            <div>
-                <h4 style="color: #34495e; margin-bottom: 10px;">Contact Information</h4>
-                <p><strong>Phone:</strong> {phone}</p>
-                <p><strong>Email:</strong> {email}</p>
-                
-                <h4 style="color: #34495e; margin: 15px 0 10px 0;">Address</h4>
-                <p><strong>Address:</strong> {address_line}</p>
-                <p><strong>City:</strong> {city}</p>
-                <p><strong>State:</strong> {state}</p>
-                <p><strong>Postal Code:</strong> {postal_code}</p>
-            </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div>
-                <h4 style="color: #34495e; margin-bottom: 10px;">Demographics</h4>
-                <p><strong>Marital Status:</strong> {marital_status}</p>
-                <p><strong>Language:</strong> {language}</p>
-                <p><strong>Race:</strong> {race}</p>
-                <p><strong>Ethnicity:</strong> {ethnicity}</p>
-            </div>
-            
-            <div>
-                <h4 style="color: #34495e; margin-bottom: 10px;">Organizational</h4>
-                <p><strong>Managing Organization:</strong> {managing_org}</p>
-            </div>
-        </div>
-    </div>
-    """
-
-    return html
+**Managing Organization:** {managing_org}
+"""
 
 
 def format_condition_summary(condition_data: Dict[str, Any]) -> str:
@@ -300,6 +216,7 @@ def format_condition_summary(condition_data: Dict[str, Any]) -> str:
     Returns:
         Formatted condition summary
     """
+    logger.debug(f"📝 INTERNAL FUNCTION CALLED: format_condition_summary()")
     if "error" in condition_data:
         return f"Error retrieving condition: {condition_data['error']}"
 
@@ -321,6 +238,7 @@ def format_encounter_summary(encounter_data: Dict[str, Any]) -> str:
     Returns:
         Formatted encounter summary
     """
+    logger.debug(f"📝 INTERNAL FUNCTION CALLED: format_encounter_summary()")
     if "error" in encounter_data:
         return f"Error retrieving encounter: {encounter_data['error']}"
 
