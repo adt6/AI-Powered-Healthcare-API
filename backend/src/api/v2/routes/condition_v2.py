@@ -29,7 +29,7 @@ def list_conditions(
     List conditions with filtering options.
 
     - **patient_id**: Filter by specific patient (patient-based conditions)
-    - **encounter_id**: Filter by specific encounter
+    - **encounter_id**: Filter by specific encounter.
     - **code**: Filter by condition code (e.g., diabetes, hypertension)
     - **clinical_status**: Filter by clinical status (active, inactive, resolved)
     - **verification_status**: Filter by verification status (confirmed, provisional, differential)

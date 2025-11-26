@@ -9,9 +9,9 @@ from api.v2.routes import (
     practitioner_v2,
 )
 
-app = FastAPI(title="Healthcare API v2", version="2.0.0")
+app = FastAPI(title="Healthcare API v2", version="2.0.0") #creates an application instance
 
-# v2-only routers (only include the ones we've created)
+# v2-only routers
 app.include_router(patient_v2.router, prefix="/api/v2")
 app.include_router(encounter_v2.router, prefix="/api/v2")
 app.include_router(condition_v2.router, prefix="/api/v2")
