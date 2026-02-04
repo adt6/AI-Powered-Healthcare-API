@@ -386,13 +386,13 @@ def display_sidebar():
         2. **AI Model** loads automatically when selected
         3. **Use natural language** - ask questions naturally
         4. **Click examples** in sidebar for quick queries
-        
+
         **💡 Tips:**
         - Start with simple questions to test the system
         - Use patient IDs (2, 3, 4, 5) for best results
         - Try complex questions to test AI reasoning
         - The agent remembers context in conversations
-        
+
         **🔧 Troubleshooting:**
         - Check FastAPI server status (green = online)
         - Select an AI model from the dropdown above
