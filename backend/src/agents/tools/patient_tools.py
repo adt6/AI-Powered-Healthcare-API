@@ -4,7 +4,11 @@ These tools allow the agent to interact with patient data from the FHIR API.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+import requests
+import json
 
 from langchain.tools import tool
 
@@ -67,6 +71,8 @@ def get_patient_info(patient_identifier: str) -> str:
 
     except Exception as e:
         return f"Unexpected error retrieving patient {patient_identifier}: {str(e)}"
+
+
 
 
 @tool
@@ -410,16 +416,29 @@ def get_patient_observations(patient_identifier: str) -> str:
         if not observations_data:
             return f"No observations found for patient {clean_identifier}"
 
-        # Format observations
+        # Deduplicate and limit display for large result sets
+        deduplicated = deduplicate_observations(observations_data)
+        display_count = min(len(deduplicated), 20)  # Show max 20 for all observations
+        
+        # Format observations with improved formatting
         formatted_observations = []
-        for i, observation in enumerate(observations_data, 1):
-            formatted_obs = format_observation_summary(observation)
+        for i, observation in enumerate(deduplicated[:display_count], 1):
+            # Extract observation type for better rounding
+            obs_type = observation.get("code_display", "")
+            formatted_obs = format_observation_summary(observation, obs_type)
             formatted_observations.append(f"{i}. {formatted_obs}")
 
-        return (
-            f"Patient {clean_identifier} has {len(observations_data)} observation(s):\n"
+        result = (
+            f"Patient {clean_identifier} has {len(deduplicated)} observation(s)"
+            + (f" (showing {display_count} most recent):" if len(deduplicated) > display_count else ":")
+            + "\n\n"
             + "\n".join(formatted_observations)
         )
+        
+        if len(deduplicated) > display_count:
+            result += f"\n\n... and {len(deduplicated) - display_count} more observation(s)"
+        
+        return result
 
     except Exception as e:
         return (
@@ -505,18 +524,13 @@ def get_patient_observation_by_type(
                 f"Try using more general terms like 'hemoglobin', 'blood pressure', 'cholesterol', etc."
             )
 
-        # Format observations
-        formatted_observations = []
-        for i, observation in enumerate(observations_data, 1):
-            formatted_obs = format_observation_summary(observation)
-            formatted_observations.append(f"{i}. {formatted_obs}")
-
-        result = (
-            f"Patient {clean_identifier} has {len(observations_data)} {clean_observation_type} observation(s):\n\n"
-            + "\n".join(formatted_observations)
+        # Format observations with summary statistics
+        return format_observations_with_summary(
+            observations_data,
+            clean_observation_type,
+            clean_identifier,
+            max_display=15,
         )
-
-        return result
 
     except Exception as e:
         return (
@@ -524,9 +538,200 @@ def get_patient_observation_by_type(
         )
 
 
-# Helper function for observation formatting
-def format_observation_summary(observation_data: Dict[str, Any]) -> str:
-    """Format observation data into a human-readable summary."""
+# ============================================================================
+# Modular Helper Functions for Observation Formatting
+# ============================================================================
+
+
+def round_clinical_value(value: float, observation_type: Optional[str] = None) -> float:
+    """
+    Round clinical values to appropriate precision based on observation type.
+    
+    Args:
+        value: The numeric value to round
+        observation_type: Optional observation type name for type-specific rounding
+    
+    Returns:
+        Rounded value with appropriate decimal places
+    """
+    if value is None:
+        return value
+    
+    # Type-specific rounding rules
+    if observation_type:
+        obs_lower = observation_type.lower()
+        
+        # Integer values (no decimals needed)
+        if any(term in obs_lower for term in ['count', 'number', 'score', 'index']):
+            return round(value)
+        
+        # One decimal place (most clinical measurements)
+        if any(term in obs_lower for term in ['glucose', 'cholesterol', 'hemoglobin', 'pressure', 'bmi', 'weight', 'height']):
+            return round(value, 1)
+        
+        # Two decimal places (very precise measurements)
+        if any(term in obs_lower for term in ['ratio', 'percentage', 'concentration']):
+            return round(value, 2)
+    
+    # Default: 1 decimal place for most clinical values
+    return round(value, 1)
+
+
+def format_clinical_date(date_value: Any, include_time: bool = False) -> str:
+    """
+    Format dates in a more readable clinical format.
+    
+    Args:
+        date_value: Date string, datetime object, or None
+        include_time: Whether to include time in the output
+    
+    Returns:
+        Formatted date string
+    """
+    if not date_value:
+        return "Date not available"
+    
+    try:
+        # Parse string date
+        if isinstance(date_value, str):
+            # Try parsing ISO format with time
+            if "T" in date_value or " " in date_value:
+                dt = datetime.fromisoformat(date_value.replace("Z", "+00:00"))
+            else:
+                # Date only
+                dt = datetime.strptime(date_value, "%Y-%m-%d")
+        elif isinstance(date_value, datetime):
+            dt = date_value
+        else:
+            return str(date_value)
+        
+        # Format based on how recent it is
+        now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
+        days_diff = (now - dt.replace(tzinfo=None)).days if dt.tzinfo else (now - dt).days
+        
+        # Recent dates (within last year): "Sep 6, 2019"
+        if days_diff < 365:
+            if include_time and dt.hour != 0 and dt.minute != 0:
+                return dt.strftime("%b %d, %Y %I:%M %p")
+            return dt.strftime("%b %d, %Y")
+        else:
+            # Older dates: "2019-09-06"
+            if include_time and dt.hour != 0 and dt.minute != 0:
+                return dt.strftime("%Y-%m-%d %H:%M")
+            return dt.strftime("%Y-%m-%d")
+    
+    except (ValueError, TypeError):
+        return str(date_value)
+
+
+def calculate_observation_stats(observations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Calculate summary statistics for a list of observations.
+    
+    Args:
+        observations: List of observation dictionaries
+    
+    Returns:
+        Dictionary with stats: latest, min, max, average, count, unit
+    """
+    if not observations:
+        return {}
+    
+    numeric_values = []
+    latest_value = None
+    latest_date = None
+    unit = None
+    
+    for obs in observations:
+        value_quantity = obs.get("value_quantity")
+        effective_time = obs.get("effective_time")
+        
+        if value_quantity is not None:
+            try:
+                numeric_values.append(float(value_quantity))
+                unit = obs.get("value_unit", unit)
+                
+                # Track latest value
+                if effective_time:
+                    if latest_date is None:
+                        latest_value = value_quantity
+                        latest_date = effective_time
+                    else:
+                        # Compare dates to find latest
+                        try:
+                            if isinstance(effective_time, str):
+                                obs_date = datetime.fromisoformat(effective_time.replace("Z", "+00:00"))
+                            else:
+                                obs_date = effective_time
+                            
+                            if isinstance(latest_date, str):
+                                latest_date_obj = datetime.fromisoformat(latest_date.replace("Z", "+00:00"))
+                            else:
+                                latest_date_obj = latest_date
+                            
+                            if obs_date > latest_date_obj:
+                                latest_value = value_quantity
+                                latest_date = effective_time
+                        except (ValueError, TypeError):
+                            pass
+            except (ValueError, TypeError):
+                continue
+    
+    if not numeric_values:
+        return {"count": len(observations)}
+    
+    stats = {
+        "count": len(observations),
+        "latest": round_clinical_value(latest_value) if latest_value is not None else None,
+        "latest_date": format_clinical_date(latest_date) if latest_date else None,
+        "min": round_clinical_value(min(numeric_values)),
+        "max": round_clinical_value(max(numeric_values)),
+        "average": round_clinical_value(sum(numeric_values) / len(numeric_values)),
+        "unit": unit or "",
+    }
+    
+    return stats
+
+
+def deduplicate_observations(observations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Remove duplicate observations based on value, date, and type.
+    
+    Args:
+        observations: List of observation dictionaries
+    
+    Returns:
+        Deduplicated list of observations
+    """
+    seen = set()
+    deduplicated = []
+    
+    for obs in observations:
+        # Create a key from value, date, and code
+        value = obs.get("value_quantity") or obs.get("value_string", "")
+        date = obs.get("effective_time", "")
+        code = obs.get("code", "")
+        
+        key = (value, date, code)
+        
+        if key not in seen:
+            seen.add(key)
+            deduplicated.append(obs)
+    
+    return deduplicated
+
+
+def format_observation_summary(observation_data: Dict[str, Any], observation_type: Optional[str] = None) -> str:
+    """
+    Format observation data into a human-readable summary.
+    
+    Args:
+        observation_data: Dictionary containing observation data
+        observation_type: Optional observation type for value rounding
+    
+    Returns:
+        Formatted observation string
+    """
     if "error" in observation_data:
         return f"Error retrieving observation: {observation_data['error']}"
 
@@ -540,30 +745,80 @@ def format_observation_summary(observation_data: Dict[str, Any]) -> str:
     value_string = observation_data.get("value_string")
     value_unit = observation_data.get("value_unit", "")
     
-    # Determine the value to display
+    # Determine the value to display with proper rounding
     if value_quantity is not None:
-        value_str = f"{value_quantity} {value_unit}".strip()
+        rounded_value = round_clinical_value(float(value_quantity), observation_type or code_display)
+        value_str = f"{rounded_value} {value_unit}".strip()
     elif value_string:
         value_str = value_string
     else:
         value_str = "No value recorded"
     
-    # Format date
+    # Format date using improved date formatter
     effective_time = observation_data.get("effective_time")
-    if effective_time:
-        if isinstance(effective_time, str):
-            date_str = effective_time
-        else:
-            # Handle datetime object
-            from datetime import datetime
-            if isinstance(effective_time, datetime):
-                date_str = effective_time.strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                date_str = str(effective_time)
-    else:
-        date_str = "Date not available"
+    date_str = format_clinical_date(effective_time, include_time=False)
     
     # Format with code if available
     code_info = f" ({code})" if code else ""
     
     return f"{code_display}{code_info}: {value_str} | {date_str} | {status}"
+
+
+def format_observations_with_summary(
+    observations: List[Dict[str, Any]],
+    observation_type: str,
+    patient_identifier: str,
+    max_display: int = 15,
+) -> str:
+    """
+    Format observations with summary statistics and limited display.
+    
+    Args:
+        observations: List of observation dictionaries
+        observation_type: Type of observation (e.g., "glucose", "hemoglobin")
+        patient_identifier: Patient ID or identifier
+        max_display: Maximum number of observations to display (default: 15)
+    
+    Returns:
+        Formatted string with summary and observations
+    """
+    if not observations:
+        return f"No {observation_type} observations found for patient {patient_identifier}."
+    
+    # Deduplicate observations
+    deduplicated = deduplicate_observations(observations)
+    
+    # Calculate statistics
+    stats = calculate_observation_stats(deduplicated)
+    
+    # Build result string
+    result_parts = []
+    
+    # Header
+    result_parts.append(
+        f"Patient {patient_identifier} has {stats.get('count', len(deduplicated))} {observation_type} observation(s):"
+    )
+    
+    # Summary statistics (if we have numeric values)
+    if stats.get("latest") is not None:
+        result_parts.append("\n📊 Summary:")
+        result_parts.append(f"   Latest: {stats['latest']} {stats.get('unit', '')} ({stats.get('latest_date', 'N/A')})")
+        
+        if stats.get("min") is not None and stats.get("max") is not None:
+            result_parts.append(f"   Range: {stats['min']} - {stats['max']} {stats.get('unit', '')}")
+        
+        if stats.get("average") is not None:
+            result_parts.append(f"   Average: {stats['average']} {stats.get('unit', '')}")
+    
+    # Format observations (limited display)
+    display_count = min(len(deduplicated), max_display)
+    result_parts.append(f"\n📋 Recent readings (showing {display_count} of {len(deduplicated)}):")
+    
+    for i, observation in enumerate(deduplicated[:display_count], 1):
+        formatted_obs = format_observation_summary(observation, observation_type)
+        result_parts.append(f"{i}. {formatted_obs}")
+    
+    if len(deduplicated) > display_count:
+        result_parts.append(f"\n... and {len(deduplicated) - display_count} more observation(s)")
+    
+    return "\n".join(result_parts)

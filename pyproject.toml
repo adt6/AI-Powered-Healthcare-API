@@ -21,6 +21,10 @@ dependencies = [
     "streamlit",
     "requests",
     "pyyaml",
+    # TOON format for efficient data serialization
+    "toon-format @ git+https://github.com/toon-format/toon-python.git",
+    # Semantic similarity for quality comparison
+    "sentence-transformers>=2.2.0",
 ]
 
 [project.optional-dependencies]

@@ -80,5 +80,6 @@ if [ -z "$APP_PORT" ]; then
 	APP_PORT="8000"
 fi
 
-uv run uvicorn api.v2.main:app --reload --host $APP_HOST --port $APP_PORT
+# Start the server with reload watching backend directory
+uv run uvicorn api.v2.main:app --reload --reload-dir backend/src --host $APP_HOST --port $APP_PORT
 
