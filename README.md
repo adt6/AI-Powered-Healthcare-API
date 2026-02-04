@@ -24,30 +24,34 @@ A comprehensive, production-ready FastAPI project for managing healthcare data u
 
 ```text
 Building API/
-├── app/                    # Original API version
-├── app_v2/                 # Enhanced API version with comprehensive modeling
-│   ├── models/             # SQLAlchemy database models
-│   ├── routes/             # API endpoint handlers
-│   ├── schemas/            # Pydantic validation schemas
-│   ├── database.py         # Database configuration
-│   └── main.py             # FastAPI application entry point
-├── agent/                  # AI Clinical Assistant System
-│   ├── chat/               # Streamlit chatbot interface
-│   ├── prompts/            # Clinical instructions and system prompts
-│   ├── tools/              # Specialized healthcare data tools
-│   ├── agent_config.py     # AI model configuration
-│   └── agent_factory.py    # Agent creation and management
-├── scripts/                # Data import utilities
+├── backend/src/            # Backend API and AI agent
+│   ├── api/v2/             # FastAPI v2 (FHIR-style)
+│   │   ├── models/         # SQLAlchemy database models
+│   │   ├── routes/         # API endpoint handlers
+│   │   ├── schemas/        # Pydantic validation schemas
+│   │   ├── database.py     # Database configuration
+│   │   └── main.py         # FastAPI application entry point
+│   ├── agents/             # AI Clinical Assistant
+│   │   ├── prompts/        # Clinical instructions
+│   │   ├── tools/          # Patient and observation tools
+│   │   ├── agent_config.py # AI model configuration
+│   │   └── agent_factory.py
+│   ├── scripts/            # Data import utilities
+│   └── tests/              # Test suite
+├── frontend/               # Streamlit chatbot UI
+│   └── streamlit_app.py
 ├── data/                   # FHIR bundle data files
-├── mock_data/              # Sample data for testing
-├── tests/                  # Test suite
+├── docs/                   # Documentation and diagrams
+├── infra/compose/          # Docker Compose
+├── start-backend.sh        # Start FastAPI (uv)
+├── start-frontend.sh       # Start Streamlit (uv)
 ├── run_chatbot.py          # AI chatbot launcher
-└── docker-compose.yml      # Docker configuration
+└── pyproject.toml          # Dependencies (uv)
 ```
 
 ---
 
-## 🗃️ Comprehensive Data Modeling (app_v2)
+## 🗃️ Comprehensive Data Modeling (API v2)
 
 ### **Database Schema Overview**
 
@@ -273,17 +277,14 @@ DEFAULT_API_BASE_URL = "http://localhost:8000/api/v2"
 
 The AI assistant is equipped with specialized tools for healthcare data interaction:
 
-#### **Patient Data Tools:**
-- **Patient Search** - Find patients by demographics, identifiers, or medical record numbers
-- **Patient Summary** - Generate comprehensive patient overviews
-- **Patient History** - Retrieve complete medical history and timeline
-- **Demographics Analysis** - Analyze patient population characteristics
-
-#### **Clinical Data Tools:**
-- **Encounter Analysis** - Review patient visits, appointments, and hospital stays
-- **Condition Tracking** - Monitor diagnoses, problems, and clinical status
-- **Observation Insights** - Analyze test results, vital signs, and measurements
-- **Practitioner Information** - Access healthcare provider details and specialties
+#### **Patient and clinical tools:**
+- **get_patient_info** - Patient demographics by ID or identifier
+- **search_patients** - Find patients by name, DOB, gender
+- **get_patient_conditions** - Diagnoses and problems for a patient
+- **get_patient_encounters** - Visits and appointments for a patient
+- **get_patient_observations** - All lab results and vitals for a patient
+- **get_patient_observation_by_type** - Filter by type (e.g. glucose, blood pressure) with summary stats (latest, range, average)
+- **get_patient_summary** - Combined patient overview (info + conditions + encounters)
 
 #### **Advanced Analytics:**
 - **Cross-Patient Analysis** - Identify patterns across patient populations
@@ -301,14 +302,18 @@ The AI assistant is equipped with specialized tools for healthcare data interact
 
 #### **Access Methods:**
 ```bash
-# Launch the chatbot
+# From project root (recommended)
+./start-frontend.sh
+
+# Or
 python run_chatbot.py
 
-# Or via Docker Compose
-docker-compose up chatbot
+# Backend must be running first (separate terminal)
+./start-backend.sh
 ```
 
-**Web Interface:** http://localhost:8501
+**Web Interface:** http://localhost:8501  
+**API:** http://localhost:8000
 
 ### **🎯 Clinical Use Cases**
 
@@ -361,61 +366,55 @@ DEFAULT_LLM_TYPE = "llama_groq"  # Change to preferred model
 - `"gemini"` - Gemini 2.5 Flash (fast, multimodal)
 
 #### **Custom Instructions:**
-The AI assistant uses specialized clinical instructions located in `agent/prompts/clinical_instructions.md` that can be customized for specific healthcare workflows and requirements.
+The AI assistant uses specialized clinical instructions in `backend/src/agents/prompts/clinical_instructions.md` for healthcare workflows and requirements.
 
 ### **🚀 Getting Started with AI Assistant**
 
-#### **1. Launch the Chatbot:**
+#### **1. Start backend and chatbot:**
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Terminal 1: start FastAPI backend
+./start-backend.sh
 
-# Start the AI assistant
-python run_chatbot.py
+# Terminal 2: start Streamlit chatbot
+./start-frontend.sh
+# or: python run_chatbot.py
 ```
 
-#### **2. Access the Interface:**
-- Open your browser to http://localhost:8501
-- Start chatting with the clinical AI assistant
+#### **2. Access the interface:**
+- Chatbot: http://localhost:8501
+- API docs: http://localhost:8000/docs
 
-#### **3. Example Queries:**
+#### **3. Example queries:**
 ```
 "Find all patients with diabetes"
-"Show me patient John Doe's medical history"
-"What are the most common conditions in our database?"
+"Show me patient 3's glucose levels"
+"What are the conditions for patient 2?"
 "Give me a summary of recent encounters"
 ```
 
-#### **4. Docker Deployment:**
+#### **4. Docker (optional):**
 ```bash
-# Start all services including AI chatbot
-docker-compose up
+# From project root
+docker compose -f infra/compose/docker-compose.yml up
 
-# Access chatbot at http://localhost:8501
-# Access API at http://localhost:8000
+# Chatbot: http://localhost:8501  |  API: http://localhost:8000
 ```
 
 ### **🔧 AI Assistant Architecture**
 
-#### **Component Overview:**
+#### **Component overview:**
 ```
 AI Clinical Assistant
-├── Agent Factory (agent_factory.py)
-│   ├── LLM Configuration
-│   ├── Tool Integration
-│   └── Response Generation
-├── Healthcare Tools (agent/tools/)
-│   ├── Patient Tools (patient_tools.py)
-│   ├── Base Tools (base_tools.py)
-│   └── Custom Healthcare Functions
-├── Chat Interface (agent/chat/)
-│   ├── Streamlit App (streamlit_app.py)
-│   ├── Web Interface (web_interface.py)
-│   └── User Interaction Layer
-└── Clinical Prompts (agent/prompts/)
-    ├── Clinical Instructions (clinical_instructions.md)
-    ├── System Prompts (system_prompts.py)
-    └── Context Templates
+├── backend/src/agents/
+│   ├── agent_factory.py    # LLM config, tools, response generation
+│   ├── agent_config.py     # Model selection
+│   ├── tools/
+│   │   ├── patient_tools.py  # get_patient_info, observations, conditions, etc.
+│   │   └── base_tools.py     # API client, formatters
+│   └── prompts/
+│       └── clinical_instructions.md
+└── frontend/
+    └── streamlit_app.py    # Chat UI (Streamlit)
 ```
 
 #### **Data Flow:**
@@ -429,9 +428,8 @@ User Query → Streamlit Interface → AI Agent → Healthcare Tools → API →
 
 ## 🧪 API Documentation
 
-### **API Versions**
-- **v1**: `/api/v1/*` - Original implementation
-- **v2**: `/api/v2/*` - Enhanced version with comprehensive data modeling
+### **API**
+- **v2**: `/api/v2/*` - FHIR-style API (patients, encounters, conditions, observations, organizations, practitioners)
 
 ### **Interactive Documentation**
 Once running, open http://localhost:8000/docs for the interactive Swagger UI.
@@ -512,6 +510,16 @@ DELETE /api/v2/practitioners/{id} # Delete practitioner
 # - organization_id (organization-based filtering)
 # - name, specialty_code, gender
 # - identifier, limit, offset
+```
+
+#### **📊 Observations**
+```bash
+GET    /api/v2/observations      # List observations (filter by patient_id, code_display, etc.)
+GET    /api/v2/observations/{id} # Get observation by ID
+
+# Query Parameters for GET /api/v2/observations:
+# - patient_id, code_display, code (LOINC)
+# - limit, offset
 ```
 
 ### **🔍 Advanced Filtering Examples**
@@ -674,85 +682,42 @@ Practitioner (Healthcare Provider)
 ## 🚀 Quick Start
 
 ### **Prerequisites**
-- Docker and Docker Compose
-- Python 3.11+ (for local development)
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- PostgreSQL (for API data); optional for AI chatbot only
 
-### **Using Docker (Recommended)**
+### **Local development (recommended)**
 ```bash
 # Clone the repository
 git clone <your-repository-url>
-cd your-project-directory
+cd AI-Powered-Healthcare-API
 
-# Start all services (API + Database + AI Chatbot)
-docker-compose up -d
+# Terminal 1: start backend (uses uv, loads .env)
+./start-backend.sh
+# API: http://localhost:8000  |  Docs: http://localhost:8000/docs
 
-# Services will be available at:
-# - API: http://localhost:8000
-# - Swagger UI: http://localhost:8000/docs
-# - AI Chatbot: http://localhost:8501
+# Terminal 2: start Streamlit chatbot
+./start-frontend.sh
+# Chatbot: http://localhost:8501
 ```
 
-### **Local Development**
+### **Using Docker**
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up database (if not already done)
-python app_v2/create_tables_v2.py
-
-# Run the API application
-uvicorn app_v2.main:app --reload
-
-# In a separate terminal, run the AI chatbot
-python run_chatbot.py
-
-# Services will be available at:
-# - API: http://localhost:8000
-# - Interactive docs: http://localhost:8000/docs
-# - AI Chatbot: http://localhost:8501
+docker compose -f infra/compose/docker-compose.yml up -d
+# API: http://localhost:8000  |  Chatbot: http://localhost:8501
 ```
 
-### **🚀 Quick API Testing**
-
-#### **1. Start the Server**
+### **Quick API testing**
 ```bash
-# Navigate to your project directory
-cd your-project-directory
-
-# Activate virtual environment
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Start the server
-uvicorn app_v2.main:app --reload
+./start-backend.sh
+# Then open http://localhost:8000/docs (Swagger) or http://localhost:8000/redoc
 ```
 
-#### **2. Open Interactive Documentation**
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### **🤖 Quick AI Assistant Testing**
-
-#### **1. Launch the AI Chatbot**
+### **Quick AI assistant testing**
 ```bash
-# In a separate terminal
-python run_chatbot.py
-```
-
-#### **2. Access the Chat Interface**
-- Open your browser to **http://localhost:8501**
-- Start chatting with the clinical AI assistant
-
-#### **3. Try Example Queries**
-```
-"Find all patients with diabetes"
-"Show me patient demographics"
-"What are the most common conditions?"
-"Give me a summary of recent encounters"
-"Which practitioners are available?"
+./start-backend.sh   # Terminal 1
+./start-frontend.sh # Terminal 2
+# Open http://localhost:8501 and try: "What are patient 3's glucose levels?"
 ```
 
 ### **🔍 API Testing Examples**
@@ -804,22 +769,22 @@ curl -X POST "http://localhost:8000/api/v2/encounters" \
 
 ## 📊 Database Schema Visualization
 
-View the complete database schema with relationships in the [Database UML Diagram](database_uml_diagram.puml).
+View the complete database schema in [docs/database_uml_diagram.puml](docs/database_uml_diagram.puml).
 
 ---
 
 ## 🔧 Data Import
 
-The project includes comprehensive data import scripts for loading FHIR bundle data:
+Import FHIR bundle data from the project root (requires PostgreSQL and tables created):
 
 ```bash
-# Import data from FHIR bundles
-python scripts/import_patients_v2.py
-python scripts/import_practitioners_v2.py
-python scripts/import_encounters_v2.py
-python scripts/import_conditions_v2.py
-python scripts/import_observations_v2.py
-python scripts/import_organizations_v2.py
+cd backend/src
+PYTHONPATH=. python scripts/import_patients_v2.py
+PYTHONPATH=. python scripts/import_practitioners_v2.py
+PYTHONPATH=. python scripts/import_encounters_v2.py
+PYTHONPATH=. python scripts/import_conditions_v2.py
+PYTHONPATH=. python scripts/import_observations_v2.py
+PYTHONPATH=. python scripts/import_organizations_v2.py
 ```
 
 ---
@@ -827,8 +792,11 @@ python scripts/import_organizations_v2.py
 ## 🧪 Testing
 
 ```bash
-# Run tests
-pytest
+# Run tests (from project root)
+cd backend/src && PYTHONPATH=. pytest tests/ -v
+
+# Or with uv from project root
+PYTHONPATH=backend/src uv run pytest backend/src/tests/ -v
 
 # Test database connection
 python test_db_conn.py
@@ -840,56 +808,30 @@ python test_db_conn.py
 
 ### **Common Issues & Solutions**
 
-#### **1. Server Won't Start**
+#### **1. Server won't start**
 ```bash
-# Check if port 8000 is already in use
+# Free port 8000 if needed (macOS/Linux)
 lsof -ti:8000 | xargs kill -9
 
-# Restart the server
-uvicorn app_v2.main:app --reload
+# Start backend again
+./start-backend.sh
 ```
 
-#### **2. Database Connection Issues**
+#### **2. Database connection**
 ```bash
-# Test database connection
 python test_db_conn.py
-
-# Check if tables exist
-python app_v2/create_tables_v2.py
+# Create tables: from backend/src, PYTHONPATH=. python -c "from api.v2.create_tables_v2 import *; create_tables()"
 ```
 
-#### **3. Import Errors**
-```bash
-# Make sure you're in the correct directory
-cd your-project-directory
+#### **3. Import errors**
+Run from project root; use `./start-backend.sh` or set `PYTHONPATH=backend/src` when running scripts.
 
-# Activate virtual environment
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+#### **4. No data in API**
+Ensure PostgreSQL is running and tables exist. Import data from `backend/src` with `PYTHONPATH=.` (see Data Import).
 
-# Check if all dependencies are installed
-pip install -r requirements.txt
-```
-
-#### **4. No Data in API Responses**
-```bash
-# Check if data exists in database
-python -c "
-from app_v2.database import SessionLocal
-from app_v2.models.patient import PatientV2
-db = SessionLocal()
-count = db.query(PatientV2).count()
-print(f'Patients in database: {count}')
-db.close()
-"
-
-# Import sample data if needed
-python scripts/import_patients_v2.py
-```
-
-#### **5. API Endpoints Not Found**
-- Make sure you're using the correct URL: `http://localhost:8000/api/v2/`
-- Check that the server is running: `http://localhost:8000/docs`
-- Verify the endpoint exists in the Swagger UI
+#### **5. API not found**
+- Use base URL: `http://localhost:8000/api/v2/`
+- Check server: http://localhost:8000/docs
 
 ### **Health Check**
 ```bash
