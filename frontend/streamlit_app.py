@@ -1,0 +1,570 @@
+"""
+Streamlit Chatbot Interface for Clinical AI Assistant
+A beautiful, professional interface for interacting with the clinical AI agent.
+"""
+
+import os
+import sys
+import time
+from datetime import datetime
+
+import streamlit as st
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Import agent configuration
+from agents import agent_config
+from agents.agent_factory import create_assistant
+
+# Configure Streamlit page
+st.set_page_config(
+    page_title="Clinical AI Assistant",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Custom CSS for better styling
+st.markdown(
+    """
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .chat-message {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid;
+    }
+    .user-message {
+        background-color: #e3f2fd;
+        border-left-color: #2196f3;
+    }
+    .assistant-message {
+        background-color: #f3e5f5;
+        border-left-color: #9c27b0;
+    }
+    .example-query {
+        background-color: #f5f5f5;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        margin: 0.25rem 0;
+        cursor: pointer;
+        border: 1px solid #ddd;
+    }
+    .example-query:hover {
+        background-color: #e0e0e0;
+    }
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    .status-online {
+        background-color: #4caf50;
+    }
+    .status-offline {
+        background-color: #f44336;
+    }
+    .status-loading {
+        background-color: #ff9800;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+
+def initialize_session_state():
+    """Initialize session state variables."""
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "agent" not in st.session_state:
+        st.session_state.agent = None
+    if "api_status" not in st.session_state:
+        st.session_state.api_status = "unknown"
+    if "agent_loading_attempted" not in st.session_state:
+        st.session_state.agent_loading_attempted = False
+    if "selected_model" not in st.session_state:
+        st.session_state.selected_model = None
+    if "thread_id" not in st.session_state:
+        st.session_state.thread_id = "default_thread"
+
+
+def check_api_status():
+    """Check if the FastAPI server is running."""
+    try:
+        import requests
+
+        response = requests.get("http://localhost:8000/api/v2/health", timeout=3)
+        if response.status_code == 200:
+            st.session_state.api_status = "online"
+            return True
+        else:
+            st.session_state.api_status = "offline"
+            return False
+    except:
+        st.session_state.api_status = "offline"
+        return False
+
+
+def load_agent(model_type=None):
+    """Load the AI agent with specified model type."""
+    try:
+        # Use the model_type parameter or fall back to session state
+        effective_model_type = model_type or st.session_state.get(
+            "selected_model", None
+        )
+
+        # If no model is specified and none is in session state, don't load anything
+        if effective_model_type is None:
+            return None
+
+        # Check if we need to reload the agent (different model type)
+        current_model = st.session_state.get("selected_model", None)
+        if st.session_state.agent is None or current_model != effective_model_type:
+            import sys
+
+            print(
+                f"🔄 STREAMLIT: Loading agent with model: {effective_model_type}",
+                file=sys.stderr,
+            )
+            print(f"🔄 STREAMLIT: Previous model was: {current_model}", file=sys.stderr)
+
+            with st.spinner(
+                f"Loading AI agent with {effective_model_type or 'default'} model..."
+            ):
+
+                st.session_state.agent = create_assistant(
+                    effective_model_type
+                )  # creates a new agent instance
+                st.session_state.selected_model = effective_model_type
+                st.success(
+                    f"✅ AI agent loaded successfully with {effective_model_type or 'default'} model!"
+                )
+        return st.session_state.agent
+    except Exception as e:
+        import sys
+
+        print(f"❌ STREAMLIT: Failed to load agent: {str(e)}", file=sys.stderr)
+        st.error(f"❌ Failed to load AI agent: {str(e)}")
+        st.error("Please check your configuration and try refreshing the page.")
+        return None
+
+
+def display_header():
+    """Display the main header."""
+    st.markdown(
+        '<h1 class="main-header">🏥 Clinical AI Assistant</h1>', unsafe_allow_html=True
+    )
+
+    # Add description
+    st.markdown(
+        """
+    <div style="text-align: center; margin-bottom: 2rem; color: #666;">
+        <p style="font-size: 1.1rem;">Intelligent healthcare data assistant powered by LangChain and Groq</p>
+        <p style="font-size: 0.9rem;">Ask questions about patients, medical conditions, and encounters using natural language</p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    # Status indicators
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        api_online = check_api_status()
+        status_color = "status-online" if api_online else "status-offline"
+        status_text = "Online" if api_online else "Offline"
+        st.markdown(
+            f'<span class="status-indicator {status_color}"></span>**FastAPI Server:** {status_text}',
+            unsafe_allow_html=True,
+        )
+
+    with col2:
+        # More reliable agent status check
+        agent_loaded = st.session_state.agent is not None
+        selected_model = st.session_state.get("selected_model", None)
+
+        # If we have a selected model but no agent, it means we're in the process of loading
+        if selected_model and not agent_loaded:
+            status_color = "status-loading"
+            model_display_names = {
+                "gemini": "Gemini 2.5 Flash",
+                "llama_groq": "Llama 3.3 70B",
+                "mixtral": "Mistral Saba 24B",
+                "openai": "GPT-4o Mini",
+            }
+            model_name = model_display_names.get(selected_model, selected_model)
+            status_text = f"Loading ({model_name})..."
+        elif agent_loaded and selected_model:
+            status_color = "status-online"
+            model_display_names = {
+                "gemini": "Gemini 2.5 Flash",
+                "llama_groq": "Llama 3.3 70B",
+                "mixtral": "Mistral Saba 24B",
+                "openai": "GPT-4o Mini",
+            }
+            model_name = model_display_names.get(selected_model, selected_model)
+            status_text = f"Ready ({model_name})"
+        else:
+            status_color = "status-offline"
+            status_text = "Not Loaded"
+
+        st.markdown(
+            f'<span class="status-indicator {status_color}"></span>**AI Agent:** {status_text}',
+            unsafe_allow_html=True,
+        )
+
+    with col3:
+        groq_key = os.getenv("GROQ_API_KEY")
+        status_color = (
+            "status-online"
+            if groq_key and groq_key != "your-groq-api-key-here"
+            else "status-offline"
+        )
+        status_text = (
+            "Configured"
+            if groq_key and groq_key != "your-groq-api-key-here"
+            else "Not Set"
+        )
+        st.markdown(
+            f'<span class="status-indicator {status_color}"></span>**Groq API:** {status_text}',
+            unsafe_allow_html=True,
+        )
+
+    # Show message if no model is selected
+    if st.session_state.get("selected_model") is None:
+        st.info("💡 Please select an AI model from the sidebar to get started.")
+
+    # Quick stats
+    if api_online and agent_loaded:
+        st.success(
+            "✅ System Ready! You can start asking questions about patients and medical data."
+        )
+
+
+def display_sidebar():
+    """Display the sidebar with examples and information."""
+    with st.sidebar:
+        # Model Selection
+        st.header("🤖 AI Model Selection")
+
+        # Import agent config for model options
+        from agents import agent_config
+
+        model_options = {
+            "Llama 3.3 70B (Groq)": agent_config.LLAMA_GROQ_LLM_TYPE,
+            "Mistral Saba 24B (Groq)": agent_config.MIXTRAL_LLM_TYPE,
+            "Gemini 2.5 Flash (Free)": agent_config.GEMINI_LLM_TYPE,
+            "GPT-4o Mini (OpenAI)": agent_config.OPENAI_LLM_TYPE,
+        }
+
+        # Get current model (no default)
+        current_model = st.session_state.get("selected_model", None)
+
+        # Find the display name for current model
+        current_display = None
+        if current_model:
+            for display_name, model_type in model_options.items():
+                if model_type == current_model:
+                    current_display = display_name
+                    break
+
+        # Add a placeholder option for no selection
+        options_with_none = ["Select a model..."] + list(model_options.keys())
+
+        # Determine the index
+        if current_display:
+            index = options_with_none.index(current_display)
+        else:
+            index = 0  # "Select a model..." option
+
+        selected_display = st.selectbox(
+            "Choose AI Model:",
+            options=options_with_none,
+            index=index,
+            help="Select which AI model to use for responses. Gemini is free!",
+        )
+
+        # Handle the selection
+        if selected_display == "Select a model...":
+            selected_model_type = None
+            # Clear the agent if a model was previously selected
+            if current_model:
+                st.session_state.agent = None
+                st.session_state.selected_model = None
+        else:
+            selected_model_type = model_options[selected_display]
+
+            # If model changed, reload agent
+            if selected_model_type != current_model:
+                st.session_state.agent = None  # Force reload
+                st.session_state.selected_model = selected_model_type
+                # Automatically load the agent when model is selected
+                load_agent(selected_model_type)
+
+        st.divider()
+
+        st.header("📋 Quick Examples")
+
+        # Simple Examples
+        st.subheader("🟢 Simple Questions")
+        simple_examples = [
+            "Get patient information for patient ID 2",
+            "Get patient information for patient ID 3",
+            "Search for patients named Robert854",
+            "Search for patients with first name Maxwell",
+            "What conditions does patient 2 have?",
+            "Show me all encounters for patient 3",
+        ]
+
+        for query in simple_examples:
+            if st.button(
+                f"💬 {query}", key=f"simple_{query}", use_container_width=True
+            ):
+                process_message(query)
+                st.rerun()
+
+        # Medium Examples
+        st.subheader("🟡 Medium Questions")
+        medium_examples = [
+            "Get a complete patient summary for patient 2",
+            "What are the observations for patient 3?",
+            "Show me all medical conditions for patient 4",
+            "Get patient encounters for patient ID 5",
+            "Search for patients with last name Smith",
+            "What are the medical observations for patient 2?",
+        ]
+
+        for query in medium_examples:
+            if st.button(
+                f"💬 {query}", key=f"medium_{query}", use_container_width=True
+            ):
+                process_message(query)
+                st.rerun()
+
+        # Complex Examples
+        st.subheader("🔴 Complex Questions")
+        complex_examples = [
+            "Compare the medical conditions between patient 2 and patient 3. Which patient has more complex health issues?",
+            "Analyze the medical patterns across patients 2, 3, and 4. Which patient has the most diverse range of medical conditions?",
+            "Compare the encounter history between patient 2 and patient 5. Who has had more medical visits?",
+            "What are the key differences in treatment history between patient 2 and patient 3?",
+            "Analyze the health trends for patient 3 based on their observations and conditions",
+        ]
+
+        for query in complex_examples:
+            if st.button(
+                f"💬 {query}", key=f"complex_{query}", use_container_width=True
+            ):
+                process_message(query)
+                st.rerun()
+
+        st.divider()
+
+        st.header("ℹ️ How to Use")
+        st.markdown(
+            """
+        **🚀 Getting Started:**
+        1. **FastAPI Server** must be running on port 8000
+        2. **AI Model** loads automatically when selected
+        3. **Use natural language** - ask questions naturally
+        4. **Click examples** in sidebar for quick queries
+        
+        **💡 Tips:**
+        - Start with simple questions to test the system
+        - Use patient IDs (2, 3, 4, 5) for best results
+        - Try complex questions to test AI reasoning
+        - The agent remembers context in conversations
+        
+        **🔧 Troubleshooting:**
+        - Check FastAPI server status (green = online)
+        - Select an AI model from the dropdown above
+        - Use "Test Agent Loading" for debugging
+        """
+        )
+
+        st.divider()
+
+        st.header("🐛 Debug Info")
+        if st.button("🔍 Test Agent Loading", use_container_width=True):
+            try:
+                with st.spinner("Testing agent loading..."):
+                    from agents.agent_factory import create_assistant
+
+                    test_agent = create_assistant()
+                    st.success("✅ Agent test successful!")
+                    st.json({"agent_type": str(type(test_agent))})
+            except Exception as e:
+                st.error(f"❌ Agent test failed: {str(e)}")
+                st.code(str(e))
+
+
+def display_chat_history():
+    """Display the chat history."""
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            # Check if the message contains HTML formatting
+            if (
+                "<div style=" in message["content"]
+                or "<h3" in message["content"]
+                or "<h4" in message["content"]
+            ):
+                st.markdown(message["content"], unsafe_allow_html=True)
+            else:
+                st.markdown(message["content"])
+
+
+def process_message(prompt):
+    """Process a user message and generate AI response using LangChain v1.0 messages format."""
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # Generate AI response
+    with st.spinner("Thinking..."):
+        try:
+            # Get the current model, but don't reset it if it's None
+            current_model = st.session_state.get("selected_model", None)
+            if current_model is None:
+                # If no model is selected, use the default
+                current_model = agent_config.DEFAULT_LLM_TYPE
+                st.session_state.selected_model = current_model
+            agent = load_agent(current_model)
+            if agent:
+                from langchain_core.messages import HumanMessage
+
+                # Use LangChain v1.0 format: {"messages": [HumanMessage(...)]}
+                messages_input = [HumanMessage(content=prompt)]
+
+                # Configure thread ID for conversation history
+                config = {"configurable": {"thread_id": st.session_state.thread_id}}
+
+                # Invoke the graph directly with messages format
+                response = agent.invoke({"messages": messages_input}, config)
+
+                # Extract output from messages list
+                # LangGraph returns {"messages": [HumanMessage, AIMessage, ToolMessage, AIMessage, ...]}
+                messages = response.get("messages", [])
+                ai_response = None
+
+                # Find the last AIMessage with content (final response)
+                # Skip messages with tool_calls - those are intermediate steps
+                for msg in reversed(messages):
+                    # Check if this is an AIMessage (assistant response)
+                    if (
+                        hasattr(msg, "__class__")
+                        and msg.__class__.__name__ == "AIMessage"
+                    ):
+                        # Skip if it has tool calls (this is when AI decides to call a tool)
+                        if hasattr(msg, "tool_calls") and msg.tool_calls:
+                            continue  # This is an intermediate step, not final response
+
+                        # Get the content
+                        if hasattr(msg, "content") and msg.content:
+                            content = msg.content
+
+                            # Handle different content formats
+                            if isinstance(content, list) and len(content) > 0:
+                                # Gemini format: [{'type': 'text', 'text': '...'}]
+                                text_parts = []
+                                for block in content:
+                                    if isinstance(block, dict):
+                                        if (
+                                            block.get("type") == "text"
+                                            and "text" in block
+                                        ):
+                                            text_parts.append(block["text"])
+                                        elif "text" in block:
+                                            text_parts.append(str(block["text"]))
+                                    elif isinstance(block, str):
+                                        text_parts.append(block)
+                                if text_parts:
+                                    ai_response = "\n".join(text_parts)
+                                    break
+                            elif isinstance(content, str) and content.strip():
+                                # Groq/OpenAI format: plain string
+                                ai_response = content
+                                break
+
+                    # Also check for other message types with content as fallback
+                    elif hasattr(msg, "content") and msg.content:
+                        content = msg.content
+                        if isinstance(content, str) and content.strip():
+                            ai_response = content
+                            break
+
+                # Fallback if no response found
+                if ai_response is None:
+                    if messages:
+                        # Try to get string representation of last message
+                        last_msg = messages[-1]
+                        if hasattr(last_msg, "content"):
+                            ai_response = (
+                                str(last_msg.content)
+                                if last_msg.content
+                                else "No response generated"
+                            )
+                        else:
+                            ai_response = str(last_msg)
+                    else:
+                        ai_response = "❌ No response generated - empty messages"
+            else:
+                ai_response = (
+                    "❌ AI agent is not available. Please check the configuration."
+                )
+        except Exception as e:
+            # Check if it's an iteration limit error but we still got a response
+            if "iteration limit" in str(e).lower() or "time limit" in str(e).lower():
+                # The agent might have generated a response before hitting the limit
+                ai_response = f"⚠️ Response was cut off due to complexity. The agent was processing your request but hit the iteration limit. Please try breaking your question into smaller parts.\n\nError details: {str(e)}"
+            else:
+                ai_response = f"❌ Error: {str(e)}"
+
+    # Add AI response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": ai_response})
+
+
+def main():
+    """Main application function."""
+    initialize_session_state()
+
+    # Display sidebar first (contains model selection and load button)
+    display_sidebar()
+
+    # Display header (now shows correct status after sidebar processing)
+    display_header()
+
+    # Display chat history
+    display_chat_history()
+
+    # Always show the input box
+    placeholder = "Ask me about patients, encounters, or any clinical data..."
+
+    if prompt := st.chat_input(placeholder):
+        process_message(prompt)
+        st.rerun()
+
+    # Add clear chat button
+    if st.button("🗑️ Clear Chat History", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # 🗄️ PostgreSQL Database
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres_1
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: healthcare_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres_1 -d healthcare_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 🚀 FastAPI Application
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres_1:pass@db:5432/healthcare_db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../../backend/src:/app/backend/src
+    restart: unless-stopped
+
+  # 🧠 AI Chatbot (Streamlit)
+  chatbot:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - DATABASE_URL=postgresql://postgres_1:pass@db:5432/healthcare_db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["streamlit", "run", "frontend/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    volumes:
+      - ../../backend/src:/app/backend/src
+      - ../../frontend:/app/frontend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
