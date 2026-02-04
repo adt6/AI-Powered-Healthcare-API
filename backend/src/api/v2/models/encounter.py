@@ -1,7 +1,6 @@
+from api.v2.database import Base
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-
-from api.v2.database import Base
 
 
 class EncounterV2(Base):

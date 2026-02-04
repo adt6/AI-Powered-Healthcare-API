@@ -3,12 +3,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-
 from api.v2.database import SessionLocal
 from api.v2.models.condition import ConditionV2
 from api.v2.models.patient import PatientV2
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 
 # -----------------------------

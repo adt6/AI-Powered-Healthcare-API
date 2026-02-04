@@ -13,7 +13,7 @@ import requests
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,  # Changed from DEBUG to INFO to reduce verbose output
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -171,8 +171,10 @@ def format_patient_summary(patient_data: Dict[str, Any]) -> str:
 
     # Format the complete summary with better spacing
     # Handle deceased date conditionally (can't use backslash in nested f-string)
-    deceased_line = f"**Deceased Date:** {deceased_date}\n" if deceased_date != 'N/A' else ''
-    
+    deceased_line = (
+        f"**Deceased Date:** {deceased_date}\n" if deceased_date != "N/A" else ""
+    )
+
     return f"""**PATIENT INFORMATION**
 
 **Name:** {name}

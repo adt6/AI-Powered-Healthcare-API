@@ -1,11 +1,10 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-
 from api.v2.database import get_db
 from api.v2.models.patient import PatientV2
 from api.v2.schemas.patient import PatientCreate, PatientRead, PatientUpdate
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/patients", tags=["patients v2"])
 

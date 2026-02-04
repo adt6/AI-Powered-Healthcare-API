@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, String
-
 from api.v2.database import Base
+from sqlalchemy import Column, Integer, String
 
 
 class OrganizationV2(Base):

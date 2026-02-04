@@ -1,8 +1,5 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-
 from api.v2.database import get_db
 from api.v2.models.organization import OrganizationV2
 from api.v2.schemas.organization import (
@@ -10,6 +7,8 @@ from api.v2.schemas.organization import (
     OrganizationRead,
     OrganizationUpdate,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/organizations", tags=["organizations v2"])
 

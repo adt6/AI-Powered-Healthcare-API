@@ -16,7 +16,6 @@ load_dotenv()
 
 # Import agent configuration
 from agents import agent_config
-
 from agents.agent_factory import create_assistant
 
 # Configure Streamlit page
@@ -150,9 +149,10 @@ def load_agent(model_type=None):
             with st.spinner(
                 f"Loading AI agent with {effective_model_type or 'default'} model..."
             ):
-                
 
-                st.session_state.agent = create_assistant(effective_model_type) # creates a new agent instance
+                st.session_state.agent = create_assistant(
+                    effective_model_type
+                )  # creates a new agent instance
                 st.session_state.selected_model = effective_model_type
                 st.success(
                     f"✅ AI agent loaded successfully with {effective_model_type or 'default'} model!"
@@ -448,41 +448,47 @@ def process_message(prompt):
             agent = load_agent(current_model)
             if agent:
                 from langchain_core.messages import HumanMessage
-                
+
                 # Use LangChain v1.0 format: {"messages": [HumanMessage(...)]}
                 messages_input = [HumanMessage(content=prompt)]
-                
+
                 # Configure thread ID for conversation history
                 config = {"configurable": {"thread_id": st.session_state.thread_id}}
-                
+
                 # Invoke the graph directly with messages format
                 response = agent.invoke({"messages": messages_input}, config)
-                
+
                 # Extract output from messages list
                 # LangGraph returns {"messages": [HumanMessage, AIMessage, ToolMessage, AIMessage, ...]}
                 messages = response.get("messages", [])
                 ai_response = None
-                
+
                 # Find the last AIMessage with content (final response)
                 # Skip messages with tool_calls - those are intermediate steps
                 for msg in reversed(messages):
                     # Check if this is an AIMessage (assistant response)
-                    if hasattr(msg, '__class__') and msg.__class__.__name__ == 'AIMessage':
+                    if (
+                        hasattr(msg, "__class__")
+                        and msg.__class__.__name__ == "AIMessage"
+                    ):
                         # Skip if it has tool calls (this is when AI decides to call a tool)
-                        if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                        if hasattr(msg, "tool_calls") and msg.tool_calls:
                             continue  # This is an intermediate step, not final response
-                        
+
                         # Get the content
-                        if hasattr(msg, 'content') and msg.content:
+                        if hasattr(msg, "content") and msg.content:
                             content = msg.content
-                            
+
                             # Handle different content formats
                             if isinstance(content, list) and len(content) > 0:
                                 # Gemini format: [{'type': 'text', 'text': '...'}]
                                 text_parts = []
                                 for block in content:
                                     if isinstance(block, dict):
-                                        if block.get("type") == "text" and "text" in block:
+                                        if (
+                                            block.get("type") == "text"
+                                            and "text" in block
+                                        ):
                                             text_parts.append(block["text"])
                                         elif "text" in block:
                                             text_parts.append(str(block["text"]))
@@ -495,21 +501,25 @@ def process_message(prompt):
                                 # Groq/OpenAI format: plain string
                                 ai_response = content
                                 break
-                    
+
                     # Also check for other message types with content as fallback
-                    elif hasattr(msg, 'content') and msg.content:
+                    elif hasattr(msg, "content") and msg.content:
                         content = msg.content
                         if isinstance(content, str) and content.strip():
                             ai_response = content
                             break
-                
+
                 # Fallback if no response found
                 if ai_response is None:
                     if messages:
                         # Try to get string representation of last message
                         last_msg = messages[-1]
-                        if hasattr(last_msg, 'content'):
-                            ai_response = str(last_msg.content) if last_msg.content else "No response generated"
+                        if hasattr(last_msg, "content"):
+                            ai_response = (
+                                str(last_msg.content)
+                                if last_msg.content
+                                else "No response generated"
+                            )
                         else:
                             ai_response = str(last_msg)
                     else:

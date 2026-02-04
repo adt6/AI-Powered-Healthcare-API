@@ -8,9 +8,9 @@ from datetime import datetime
 from pathlib import Path
 
 from langchain.agents import create_agent
-from langgraph.checkpoint.memory import MemorySaver
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 
 from . import agent_config
 
@@ -65,7 +65,11 @@ def get_llm(model_type=None):
     elif selected_model_type == agent_config.LLAMA_GROQ_LLM_TYPE:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("Please set GROQ_API_KEY environment variable. Current value: {}".format("(empty)" if api_key == "" else "(not set)"))
+            raise ValueError(
+                "Please set GROQ_API_KEY environment variable. Current value: {}".format(
+                    "(empty)" if api_key == "" else "(not set)"
+                )
+            )
 
         # Ensure api_key is a string and not empty
         api_key = str(api_key).strip()
@@ -82,7 +86,11 @@ def get_llm(model_type=None):
     elif selected_model_type == agent_config.MIXTRAL_LLM_TYPE:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("Please set GROQ_API_KEY environment variable. Current value: {}".format("(empty)" if api_key == "" else "(not set)"))
+            raise ValueError(
+                "Please set GROQ_API_KEY environment variable. Current value: {}".format(
+                    "(empty)" if api_key == "" else "(not set)"
+                )
+            )
 
         # Ensure api_key is a string and not empty
         api_key = str(api_key).strip()
@@ -147,8 +155,8 @@ def create_assistant(model_type=None):
         get_patient_conditions,
         get_patient_encounters,
         get_patient_info,
-        get_patient_observations,
         get_patient_observation_by_type,
+        get_patient_observations,
         get_patient_summary,
         search_patients,
     )
@@ -162,7 +170,6 @@ def create_assistant(model_type=None):
         get_patient_observation_by_type,
         get_patient_summary,
     ]
-
 
     # Step 4: Prepare clinical instructions as system prompt
     # Instructions are loaded from clinical_instructions.md file
@@ -182,5 +189,5 @@ def create_assistant(model_type=None):
         checkpointer=memory,  # Use MemorySaver for conversation history
         debug=False,  # Enable debug mode to see tool calls
     )
-    
+
     return agent_graph

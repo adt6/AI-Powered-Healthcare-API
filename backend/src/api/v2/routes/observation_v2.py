@@ -1,11 +1,10 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-
 from api.v2.database import get_db
 from api.v2.models.observation import ObservationV2
 from api.v2.schemas.observation import ObservationResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -14,21 +13,28 @@ router = APIRouter()
 def get_observations(
     patient_id: Optional[int] = Query(None, description="Filter by patient ID"),
     encounter_id: Optional[int] = Query(None, description="Filter by encounter ID"),
-    practitioner_id: Optional[int] = Query(None, description="Filter by practitioner ID"),
-    code: Optional[str] = Query(None, description="Filter by observation code (e.g., LOINC code)"),
-    code_display: Optional[str] = Query(None, description="Filter by observation type name (e.g., 'hemoglobin', 'blood pressure')"),
+    practitioner_id: Optional[int] = Query(
+        None, description="Filter by practitioner ID"
+    ),
+    code: Optional[str] = Query(
+        None, description="Filter by observation code (e.g., LOINC code)"
+    ),
+    code_display: Optional[str] = Query(
+        None,
+        description="Filter by observation type name (e.g., 'hemoglobin', 'blood pressure')",
+    ),
     db: Session = Depends(get_db),
 ):
     """
     Get observations with optional filtering.
-    
+
     Supports filtering by:
     - patient_id: Get observations for a specific patient
     - encounter_id: Get observations from a specific encounter
     - practitioner_id: Get observations by a specific practitioner
     - code: Filter by observation code (e.g., "718-7" for hemoglobin)
     - code_display: Filter by observation type name (partial match, case-insensitive)
-    
+
     Examples:
     - /observations?patient_id=3&code_display=hemoglobin
     - /observations?patient_id=3&code_display=blood pressure

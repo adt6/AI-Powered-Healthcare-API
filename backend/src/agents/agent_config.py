@@ -6,7 +6,9 @@ from pathlib import Path
 
 # --- Configuration ---
 # Path relative to this file's location (backend/src/agents/)
-INSTRUCTIONS_FILE_PATH = Path(__file__).parent.parent / "agents" / "prompts" / "clinical_instructions.md"
+INSTRUCTIONS_FILE_PATH = (
+    Path(__file__).parent.parent / "agents" / "prompts" / "clinical_instructions.md"
+)
 HAIKU_LLM_TYPE = "haiku"
 SONNET_LLM_TYPE = "sonnet"
 LLAMA_GROQ_LLM_TYPE = "llama_groq"
@@ -25,7 +27,9 @@ FALLBACK_INSTRUCTIONS = (
 # Model IDs (Use official IDs)
 MODEL_ID_HAIKU = "claude-3-haiku-20240307"
 MODEL_ID_SONNET = "claude-3-5-sonnet-20241022"
-MODEL_ID_LLAMA_GROQ = "llama-3.3-70b-versatile"  # Llama 3.3 70B - Groq docs confirm tool use support
+MODEL_ID_LLAMA_GROQ = (
+    "llama-3.3-70b-versatile"  # Llama 3.3 70B - Groq docs confirm tool use support
+)
 MODEL_ID_MIXTRAL_GROQ = "mistral-saba-24b"  # Updated from deprecated mixtral-8x7b-32768
 MODEL_ID_OPENAI = "gpt-4o-mini"
 MODEL_ID_GEMINI = (

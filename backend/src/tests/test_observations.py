@@ -49,7 +49,9 @@ def test_filter_observations_by_code_display(client):
     # Verify all results contain "glucose" in code_display (case-insensitive)
     for item in items:
         code_display = item.get("code_display", "").lower()
-        assert "glucose" in code_display, f"Expected 'glucose' in code_display, got: {code_display}"
+        assert (
+            "glucose" in code_display
+        ), f"Expected 'glucose' in code_display, got: {code_display}"
 
 
 def test_filter_observations_by_code(client):
@@ -69,10 +71,12 @@ def test_filter_observations_by_code(client):
 def test_observations_sorted_by_date(client):
     """Test that observations are sorted by effective_time (most recent first)."""
     patient_id = ensure_patient(client)
-    r = client.get(f"/api/v2/observations?patient_id={patient_id}&code_display=glucose&limit=10")
+    r = client.get(
+        f"/api/v2/observations?patient_id={patient_id}&code_display=glucose&limit=10"
+    )
     assert r.status_code == 200
     items = r.json()
-    
+
     if len(items) > 1:
         # Extract dates (skip None values)
         dates = []
@@ -86,7 +90,7 @@ def test_observations_sorted_by_date(client):
                     dates.append(datetime.fromisoformat(dt_str))
                 else:
                     dates.append(effective_time)
-        
+
         if len(dates) > 1:
             # Verify descending order (most recent first)
             for i in range(len(dates) - 1):
@@ -101,7 +105,7 @@ def test_observation_response_format(client):
     r = client.get("/api/v2/observations?limit=1")
     assert r.status_code == 200
     items = r.json()
-    
+
     if items:
         obs = items[0]
         # Verify required fields exist
@@ -111,9 +115,9 @@ def test_observation_response_format(client):
         assert "status" in obs, "Observation should have 'status' field"
         # Verify optional but important fields are present (even if None)
         assert "code_display" in obs, "Observation should have 'code_display' field"
-        assert "value_quantity" in obs or "value_string" in obs, (
-            "Observation should have either 'value_quantity' or 'value_string'"
-        )
+        assert (
+            "value_quantity" in obs or "value_string" in obs
+        ), "Observation should have either 'value_quantity' or 'value_string'"
         assert "effective_time" in obs, "Observation should have 'effective_time' field"
 
 
@@ -123,7 +127,7 @@ def test_get_observation_by_id(client):
     r = client.get("/api/v2/observations?limit=1")
     assert r.status_code == 200
     items = r.json()
-    
+
     if items:
         obs_id = items[0]["id"]
         r2 = client.get(f"/api/v2/observations/{obs_id}")
@@ -159,21 +163,26 @@ def test_filter_observations_case_insensitive(client):
     """Test that code_display filter is case-insensitive."""
     patient_id = ensure_patient(client)
     # Test with different cases
-    r1 = client.get(f"/api/v2/observations?patient_id={patient_id}&code_display=GLUCOSE")
-    r2 = client.get(f"/api/v2/observations?patient_id={patient_id}&code_display=glucose")
-    r3 = client.get(f"/api/v2/observations?patient_id={patient_id}&code_display=Glucose")
-    
+    r1 = client.get(
+        f"/api/v2/observations?patient_id={patient_id}&code_display=GLUCOSE"
+    )
+    r2 = client.get(
+        f"/api/v2/observations?patient_id={patient_id}&code_display=glucose"
+    )
+    r3 = client.get(
+        f"/api/v2/observations?patient_id={patient_id}&code_display=Glucose"
+    )
+
     assert r1.status_code == 200
     assert r2.status_code == 200
     assert r3.status_code == 200
-    
+
     # All should return the same results (case-insensitive)
     items1 = r1.json()
     items2 = r2.json()
     items3 = r3.json()
-    
-    # Compare counts (should be same)
-    assert len(items1) == len(items2) == len(items3), (
-        "Case-insensitive filtering should return same results"
-    )
 
+    # Compare counts (should be same)
+    assert (
+        len(items1) == len(items2) == len(items3)
+    ), "Case-insensitive filtering should return same results"

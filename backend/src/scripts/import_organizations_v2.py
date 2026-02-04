@@ -2,11 +2,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-
 from api.v2.database import SessionLocal
 from api.v2.models.organization import OrganizationV2
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 
 # -----------------------------

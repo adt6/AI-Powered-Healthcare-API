@@ -1,12 +1,11 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-
 from api.v2.database import get_db
 from api.v2.models.encounter import EncounterV2
 from api.v2.schemas.encounter import EncounterCreate, EncounterRead, EncounterUpdate
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/encounters", tags=["encounters v2"])
 

@@ -4,11 +4,8 @@ These tools allow the agent to interact with patient data from the FHIR API.
 """
 
 import logging
-import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-import requests
-import json
+from typing import Any, Dict, List, Optional
 
 from langchain.tools import tool
 
@@ -28,10 +25,10 @@ logger = logging.getLogger(__name__)
 def get_patient_info(patient_identifier: str) -> str:
     """
     Get detailed information about a specific patient by their ID or identifier.
-    
+
     Use this tool when the user asks for patient information and provides a patient ID.
     This includes queries about patient details, demographics, or basic information.
-    
+
     Always use this tool immediately when a patient ID is mentioned - do not ask for more information.
 
     Args:
@@ -40,7 +37,9 @@ def get_patient_info(patient_identifier: str) -> str:
     Returns:
         Formatted patient information including name, birth date, gender, and ID
     """
-    logger.info(f"🔧 TOOL CALLED: get_patient_info(patient_identifier='{patient_identifier}')")
+    logger.info(
+        f"🔧 TOOL CALLED: get_patient_info(patient_identifier='{patient_identifier}')"
+    )
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -73,8 +72,6 @@ def get_patient_info(patient_identifier: str) -> str:
         return f"Unexpected error retrieving patient {patient_identifier}: {str(e)}"
 
 
-
-
 @tool
 def search_patients(
     first_name: Optional[str] = None,
@@ -98,7 +95,9 @@ def search_patients(
     Returns:
         List of patients matching the search criteria
     """
-    logger.info(f"🔧 TOOL CALLED: search_patients(first_name='{first_name}', last_name='{last_name}', birth_date='{birth_date}', gender='{gender}', limit={limit})")
+    logger.info(
+        f"🔧 TOOL CALLED: search_patients(first_name='{first_name}', last_name='{last_name}', birth_date='{birth_date}', gender='{gender}', limit={limit})"
+    )
     try:
         # Clean input parameters - remove any parameter formatting
         clean_first_name = first_name.strip() if first_name else None
@@ -189,7 +188,7 @@ def search_patients(
 def get_patient_conditions(patient_identifier: str) -> str:
     """
     Get all medical conditions for a specific patient.
-    
+
     Use this tool when the user asks about a patient's medical conditions, diagnoses, or health problems.
     Call immediately when a patient ID and "conditions" are mentioned together.
 
@@ -199,7 +198,9 @@ def get_patient_conditions(patient_identifier: str) -> str:
     Returns:
         List of conditions associated with the patient
     """
-    logger.info(f"🔧 TOOL CALLED: get_patient_conditions(patient_identifier='{patient_identifier}')")
+    logger.info(
+        f"🔧 TOOL CALLED: get_patient_conditions(patient_identifier='{patient_identifier}')"
+    )
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -250,7 +251,7 @@ def get_patient_conditions(patient_identifier: str) -> str:
 def get_patient_encounters(patient_identifier: str) -> str:
     """
     Get all medical encounters for a specific patient.
-    
+
     Use this tool when the user asks about a patient's visits, appointments, hospital stays, or encounters.
     Call immediately when a patient ID and "encounters", "visits", or "appointments" are mentioned.
 
@@ -260,7 +261,9 @@ def get_patient_encounters(patient_identifier: str) -> str:
     Returns:
         List of encounters associated with the patient
     """
-    logger.info(f"🔧 TOOL CALLED: get_patient_encounters(patient_identifier='{patient_identifier}')")
+    logger.info(
+        f"🔧 TOOL CALLED: get_patient_encounters(patient_identifier='{patient_identifier}')"
+    )
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -312,7 +315,9 @@ def get_patient_summary(patient_identifier: str) -> str:
     Returns:
         Complete patient summary with all related information
     """
-    logger.info(f"🔧 TOOL CALLED: get_patient_summary(patient_identifier='{patient_identifier}')")
+    logger.info(
+        f"🔧 TOOL CALLED: get_patient_summary(patient_identifier='{patient_identifier}')"
+    )
     try:
         # Clean the input - remove any parameter formatting
         clean_identifier = patient_identifier.strip()
@@ -347,11 +352,17 @@ def get_patient_summary(patient_identifier: str) -> str:
         patient_info = format_patient_summary(patient_response)
 
         # Get conditions - use API directly
-        conditions_response = api_client.get(f"/conditions", params={"patient_id": patient_id})
+        conditions_response = api_client.get(
+            f"/conditions", params={"patient_id": patient_id}
+        )
         if isinstance(conditions_response, dict) and "error" in conditions_response:
-            conditions_info = f"Error retrieving conditions: {conditions_response['error']}"
+            conditions_info = (
+                f"Error retrieving conditions: {conditions_response['error']}"
+            )
         else:
-            conditions = conditions_response if isinstance(conditions_response, list) else []
+            conditions = (
+                conditions_response if isinstance(conditions_response, list) else []
+            )
             if not conditions:
                 conditions_info = f"No conditions found for patient {clean_identifier}."
             else:
@@ -360,11 +371,17 @@ def get_patient_summary(patient_identifier: str) -> str:
                     conditions_info += f"{i}. {format_condition_summary(condition)}\n\n"
 
         # Get encounters - use API directly
-        encounters_response = api_client.get(f"/encounters", params={"patient_id": patient_id})
+        encounters_response = api_client.get(
+            f"/encounters", params={"patient_id": patient_id}
+        )
         if isinstance(encounters_response, dict) and "error" in encounters_response:
-            encounters_info = f"Error retrieving encounters: {encounters_response['error']}"
+            encounters_info = (
+                f"Error retrieving encounters: {encounters_response['error']}"
+            )
         else:
-            encounters = encounters_response if isinstance(encounters_response, list) else []
+            encounters = (
+                encounters_response if isinstance(encounters_response, list) else []
+            )
             if not encounters:
                 encounters_info = f"No encounters found for patient {clean_identifier}."
             else:
@@ -395,7 +412,9 @@ def get_patient_observations(patient_identifier: str) -> str:
     Returns:
         str: Formatted list of patient observations
     """
-    logger.info(f"🔧 TOOL CALLED: get_patient_observations(patient_identifier='{patient_identifier}')")
+    logger.info(
+        f"🔧 TOOL CALLED: get_patient_observations(patient_identifier='{patient_identifier}')"
+    )
     try:
         # Clean the patient identifier
         clean_identifier = patient_identifier.strip()
@@ -419,7 +438,7 @@ def get_patient_observations(patient_identifier: str) -> str:
         # Deduplicate and limit display for large result sets
         deduplicated = deduplicate_observations(observations_data)
         display_count = min(len(deduplicated), 20)  # Show max 20 for all observations
-        
+
         # Format observations with improved formatting
         formatted_observations = []
         for i, observation in enumerate(deduplicated[:display_count], 1):
@@ -430,14 +449,20 @@ def get_patient_observations(patient_identifier: str) -> str:
 
         result = (
             f"Patient {clean_identifier} has {len(deduplicated)} observation(s)"
-            + (f" (showing {display_count} most recent):" if len(deduplicated) > display_count else ":")
+            + (
+                f" (showing {display_count} most recent):"
+                if len(deduplicated) > display_count
+                else ":"
+            )
             + "\n\n"
             + "\n".join(formatted_observations)
         )
-        
+
         if len(deduplicated) > display_count:
-            result += f"\n\n... and {len(deduplicated) - display_count} more observation(s)"
-        
+            result += (
+                f"\n\n... and {len(deduplicated) - display_count} more observation(s)"
+            )
+
         return result
 
     except Exception as e:
@@ -453,7 +478,7 @@ def get_patient_observation_by_type(
 ) -> str:
     """
     Get specific medical observations for a patient by observation type.
-    
+
     Use this tool when the user asks for a specific measurement or observation type.
     Examples of when to use this:
     - "What is patient 3's hemoglobin level?" → observation_type="hemoglobin"
@@ -461,16 +486,16 @@ def get_patient_observation_by_type(
     - "What are the cholesterol values?" → observation_type="cholesterol"
     - "Get patient 3's glucose levels" → observation_type="glucose"
     - "Show me BMI measurements" → observation_type="BMI" or "body mass index"
-    
+
     This tool filters observations to show only the requested type, making it much more useful
     than listing all observations when clinicians need specific information.
-    
+
     Args:
         patient_identifier: The patient ID as a string (e.g., "3", "123") or identifier (UUID/MRN)
-        observation_type: The type of observation to filter (e.g., "hemoglobin", "blood pressure", 
-                         "cholesterol", "glucose", "BMI", "weight", "temperature"). 
+        observation_type: The type of observation to filter (e.g., "hemoglobin", "blood pressure",
+                         "cholesterol", "glucose", "BMI", "weight", "temperature").
                          Use common clinical terms - the system will match partial names.
-    
+
     Returns:
         Formatted list of matching observations with values, dates, and status
     """
@@ -491,9 +516,13 @@ def get_patient_observation_by_type(
 
         # Clean observation type
         clean_observation_type = observation_type.strip()
-        if clean_observation_type.startswith('"') and clean_observation_type.endswith('"'):
+        if clean_observation_type.startswith('"') and clean_observation_type.endswith(
+            '"'
+        ):
             clean_observation_type = clean_observation_type[1:-1]
-        elif clean_observation_type.startswith("'") and clean_observation_type.endswith("'"):
+        elif clean_observation_type.startswith("'") and clean_observation_type.endswith(
+            "'"
+        ):
             clean_observation_type = clean_observation_type[1:-1]
 
         # Get patient ID if identifier is not numeric
@@ -533,9 +562,7 @@ def get_patient_observation_by_type(
         )
 
     except Exception as e:
-        return (
-            f"Error retrieving {observation_type} observations for patient {patient_identifier}: {str(e)}"
-        )
+        return f"Error retrieving {observation_type} observations for patient {patient_identifier}: {str(e)}"
 
 
 # ============================================================================
@@ -546,33 +573,44 @@ def get_patient_observation_by_type(
 def round_clinical_value(value: float, observation_type: Optional[str] = None) -> float:
     """
     Round clinical values to appropriate precision based on observation type.
-    
+
     Args:
         value: The numeric value to round
         observation_type: Optional observation type name for type-specific rounding
-    
+
     Returns:
         Rounded value with appropriate decimal places
     """
     if value is None:
         return value
-    
+
     # Type-specific rounding rules
     if observation_type:
         obs_lower = observation_type.lower()
-        
+
         # Integer values (no decimals needed)
-        if any(term in obs_lower for term in ['count', 'number', 'score', 'index']):
+        if any(term in obs_lower for term in ["count", "number", "score", "index"]):
             return round(value)
-        
+
         # One decimal place (most clinical measurements)
-        if any(term in obs_lower for term in ['glucose', 'cholesterol', 'hemoglobin', 'pressure', 'bmi', 'weight', 'height']):
+        if any(
+            term in obs_lower
+            for term in [
+                "glucose",
+                "cholesterol",
+                "hemoglobin",
+                "pressure",
+                "bmi",
+                "weight",
+                "height",
+            ]
+        ):
             return round(value, 1)
-        
+
         # Two decimal places (very precise measurements)
-        if any(term in obs_lower for term in ['ratio', 'percentage', 'concentration']):
+        if any(term in obs_lower for term in ["ratio", "percentage", "concentration"]):
             return round(value, 2)
-    
+
     # Default: 1 decimal place for most clinical values
     return round(value, 1)
 
@@ -580,17 +618,17 @@ def round_clinical_value(value: float, observation_type: Optional[str] = None) -
 def format_clinical_date(date_value: Any, include_time: bool = False) -> str:
     """
     Format dates in a more readable clinical format.
-    
+
     Args:
         date_value: Date string, datetime object, or None
         include_time: Whether to include time in the output
-    
+
     Returns:
         Formatted date string
     """
     if not date_value:
         return "Date not available"
-    
+
     try:
         # Parse string date
         if isinstance(date_value, str):
@@ -604,11 +642,13 @@ def format_clinical_date(date_value: Any, include_time: bool = False) -> str:
             dt = date_value
         else:
             return str(date_value)
-        
+
         # Format based on how recent it is
         now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
-        days_diff = (now - dt.replace(tzinfo=None)).days if dt.tzinfo else (now - dt).days
-        
+        days_diff = (
+            (now - dt.replace(tzinfo=None)).days if dt.tzinfo else (now - dt).days
+        )
+
         # Recent dates (within last year): "Sep 6, 2019"
         if days_diff < 365:
             if include_time and dt.hour != 0 and dt.minute != 0:
@@ -619,7 +659,7 @@ def format_clinical_date(date_value: Any, include_time: bool = False) -> str:
             if include_time and dt.hour != 0 and dt.minute != 0:
                 return dt.strftime("%Y-%m-%d %H:%M")
             return dt.strftime("%Y-%m-%d")
-    
+
     except (ValueError, TypeError):
         return str(date_value)
 
@@ -627,30 +667,30 @@ def format_clinical_date(date_value: Any, include_time: bool = False) -> str:
 def calculate_observation_stats(observations: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Calculate summary statistics for a list of observations.
-    
+
     Args:
         observations: List of observation dictionaries
-    
+
     Returns:
         Dictionary with stats: latest, min, max, average, count, unit
     """
     if not observations:
         return {}
-    
+
     numeric_values = []
     latest_value = None
     latest_date = None
     unit = None
-    
+
     for obs in observations:
         value_quantity = obs.get("value_quantity")
         effective_time = obs.get("effective_time")
-        
+
         if value_quantity is not None:
             try:
                 numeric_values.append(float(value_quantity))
                 unit = obs.get("value_unit", unit)
-                
+
                 # Track latest value
                 if effective_time:
                     if latest_date is None:
@@ -660,15 +700,19 @@ def calculate_observation_stats(observations: List[Dict[str, Any]]) -> Dict[str,
                         # Compare dates to find latest
                         try:
                             if isinstance(effective_time, str):
-                                obs_date = datetime.fromisoformat(effective_time.replace("Z", "+00:00"))
+                                obs_date = datetime.fromisoformat(
+                                    effective_time.replace("Z", "+00:00")
+                                )
                             else:
                                 obs_date = effective_time
-                            
+
                             if isinstance(latest_date, str):
-                                latest_date_obj = datetime.fromisoformat(latest_date.replace("Z", "+00:00"))
+                                latest_date_obj = datetime.fromisoformat(
+                                    latest_date.replace("Z", "+00:00")
+                                )
                             else:
                                 latest_date_obj = latest_date
-                            
+
                             if obs_date > latest_date_obj:
                                 latest_value = value_quantity
                                 latest_date = effective_time
@@ -676,59 +720,65 @@ def calculate_observation_stats(observations: List[Dict[str, Any]]) -> Dict[str,
                             pass
             except (ValueError, TypeError):
                 continue
-    
+
     if not numeric_values:
         return {"count": len(observations)}
-    
+
     stats = {
         "count": len(observations),
-        "latest": round_clinical_value(latest_value) if latest_value is not None else None,
+        "latest": (
+            round_clinical_value(latest_value) if latest_value is not None else None
+        ),
         "latest_date": format_clinical_date(latest_date) if latest_date else None,
         "min": round_clinical_value(min(numeric_values)),
         "max": round_clinical_value(max(numeric_values)),
         "average": round_clinical_value(sum(numeric_values) / len(numeric_values)),
         "unit": unit or "",
     }
-    
+
     return stats
 
 
-def deduplicate_observations(observations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def deduplicate_observations(
+    observations: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     """
     Remove duplicate observations based on value, date, and type.
-    
+
     Args:
         observations: List of observation dictionaries
-    
+
     Returns:
         Deduplicated list of observations
     """
     seen = set()
     deduplicated = []
-    
+
     for obs in observations:
         # Create a key from value, date, and code
         value = obs.get("value_quantity") or obs.get("value_string", "")
         date = obs.get("effective_time", "")
         code = obs.get("code", "")
-        
+
         key = (value, date, code)
-        
+
         if key not in seen:
             seen.add(key)
             deduplicated.append(obs)
-    
+
     return deduplicated
 
 
-def format_observation_summary(observation_data: Dict[str, Any], observation_type: Optional[str] = None) -> str:
+def format_observation_summary(
+    observation_data: Dict[str, Any], observation_type: Optional[str] = None
+) -> str:
     """
     Format observation data into a human-readable summary.
-    
+
     Args:
         observation_data: Dictionary containing observation data
         observation_type: Optional observation type for value rounding
-    
+
     Returns:
         Formatted observation string
     """
@@ -739,28 +789,30 @@ def format_observation_summary(observation_data: Dict[str, Any], observation_typ
     code_display = observation_data.get("code_display", "Unknown")
     code = observation_data.get("code", "")
     status = observation_data.get("status", "Unknown")
-    
+
     # Handle both numeric and string values
     value_quantity = observation_data.get("value_quantity")
     value_string = observation_data.get("value_string")
     value_unit = observation_data.get("value_unit", "")
-    
+
     # Determine the value to display with proper rounding
     if value_quantity is not None:
-        rounded_value = round_clinical_value(float(value_quantity), observation_type or code_display)
+        rounded_value = round_clinical_value(
+            float(value_quantity), observation_type or code_display
+        )
         value_str = f"{rounded_value} {value_unit}".strip()
     elif value_string:
         value_str = value_string
     else:
         value_str = "No value recorded"
-    
+
     # Format date using improved date formatter
     effective_time = observation_data.get("effective_time")
     date_str = format_clinical_date(effective_time, include_time=False)
-    
+
     # Format with code if available
     code_info = f" ({code})" if code else ""
-    
+
     return f"{code_display}{code_info}: {value_str} | {date_str} | {status}"
 
 
@@ -772,53 +824,63 @@ def format_observations_with_summary(
 ) -> str:
     """
     Format observations with summary statistics and limited display.
-    
+
     Args:
         observations: List of observation dictionaries
         observation_type: Type of observation (e.g., "glucose", "hemoglobin")
         patient_identifier: Patient ID or identifier
         max_display: Maximum number of observations to display (default: 15)
-    
+
     Returns:
         Formatted string with summary and observations
     """
     if not observations:
         return f"No {observation_type} observations found for patient {patient_identifier}."
-    
+
     # Deduplicate observations
     deduplicated = deduplicate_observations(observations)
-    
+
     # Calculate statistics
     stats = calculate_observation_stats(deduplicated)
-    
+
     # Build result string
     result_parts = []
-    
+
     # Header
     result_parts.append(
         f"Patient {patient_identifier} has {stats.get('count', len(deduplicated))} {observation_type} observation(s):"
     )
-    
+
     # Summary statistics (if we have numeric values)
     if stats.get("latest") is not None:
         result_parts.append("\n📊 Summary:")
-        result_parts.append(f"   Latest: {stats['latest']} {stats.get('unit', '')} ({stats.get('latest_date', 'N/A')})")
-        
+        result_parts.append(
+            f"   Latest: {stats['latest']} {stats.get('unit', '')} ({stats.get('latest_date', 'N/A')})"
+        )
+
         if stats.get("min") is not None and stats.get("max") is not None:
-            result_parts.append(f"   Range: {stats['min']} - {stats['max']} {stats.get('unit', '')}")
-        
+            result_parts.append(
+                f"   Range: {stats['min']} - {stats['max']} {stats.get('unit', '')}"
+            )
+
         if stats.get("average") is not None:
-            result_parts.append(f"   Average: {stats['average']} {stats.get('unit', '')}")
-    
+            result_parts.append(
+                f"   Average: {stats['average']} {stats.get('unit', '')}"
+            )
+
     # Format observations (limited display)
     display_count = min(len(deduplicated), max_display)
-    result_parts.append(f"\n📋 Recent readings (showing {display_count} of {len(deduplicated)}):")
-    
+    result_parts.append(
+        f"\n📋 Recent readings (showing {display_count} of {len(deduplicated)}):"
+    )
+
     for i, observation in enumerate(deduplicated[:display_count], 1):
         formatted_obs = format_observation_summary(observation, observation_type)
         result_parts.append(f"{i}. {formatted_obs}")
-    
+
     if len(deduplicated) > display_count:
-        result_parts.append(f"\n... and {len(deduplicated) - display_count} more observation(s)")
-    
+        result_parts.append(
+            f"\n... and {len(deduplicated) - display_count} more observation(s)"
+        )
+
     return "\n".join(result_parts)

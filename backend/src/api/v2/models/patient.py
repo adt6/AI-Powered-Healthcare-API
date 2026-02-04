@@ -1,6 +1,5 @@
-from sqlalchemy import Boolean, Column, Date, Integer, String
-
 from api.v2.database import Base
+from sqlalchemy import Boolean, Column, Date, Integer, String
 
 
 class PatientV2(Base):

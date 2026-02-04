@@ -13,7 +13,7 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 # Base class for SQLAlchemy models
-# provides table mapping and metadata and all the 
+# provides table mapping and metadata and all the
 Base = declarative_base()
 
 

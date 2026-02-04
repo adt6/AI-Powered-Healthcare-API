@@ -2,6 +2,7 @@
 Test script to verify import scripts work correctly with sample data.
 This script uses a test SQLite database to avoid affecting production data.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -24,14 +25,14 @@ from api.v2.models import (
     PatientV2,
     PractitionerV2,
 )
+from scripts.import_conditions_v2 import import_path as import_conditions
+from scripts.import_encounters_v2 import import_encounters_from_bundle
+from scripts.import_observations_v2 import import_path as import_observations
 
 # Import the import scripts
 from scripts.import_organizations_v2 import import_path as import_organizations
 from scripts.import_patients_v2 import import_patient_from_bundle
 from scripts.import_practitioners_v2 import import_path as import_practitioners
-from scripts.import_encounters_v2 import import_encounters_from_bundle
-from scripts.import_conditions_v2 import import_path as import_conditions
-from scripts.import_observations_v2 import import_path as import_observations
 
 
 def setup_test_db():
@@ -39,7 +40,7 @@ def setup_test_db():
     print("=" * 60)
     print("Setting up test database...")
     print("=" * 60)
-    
+
     # Create tables
     Base.metadata.create_all(bind=SessionLocal().bind)
     print("✓ Test database tables created\n")
@@ -50,11 +51,11 @@ def test_import_sample_bundle(bundle_path: Path):
     print("=" * 60)
     print(f"Testing import with bundle: {bundle_path.name}")
     print("=" * 60)
-    
+
     if not bundle_path.exists():
         print(f"❌ Bundle file not found: {bundle_path}")
         return False
-    
+
     # Track counts before and after
     db = SessionLocal()
     try:
@@ -68,9 +69,9 @@ def test_import_sample_bundle(bundle_path: Path):
         }
     finally:
         db.close()
-    
+
     print(f"\nInitial counts: {initial_counts}\n")
-    
+
     # Test 1: Import Organizations
     print("\n[1/6] Testing Organizations import...")
     try:
@@ -82,7 +83,7 @@ def test_import_sample_bundle(bundle_path: Path):
     except Exception as e:
         print(f"❌ Organizations import failed: {e}")
         return False
-    
+
     # Test 2: Import Patients
     print("\n[2/6] Testing Patients import...")
     try:
@@ -94,9 +95,10 @@ def test_import_sample_bundle(bundle_path: Path):
     except Exception as e:
         print(f"❌ Patients import failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
-    
+
     # Test 3: Import Practitioners
     print("\n[3/6] Testing Practitioners import...")
     try:
@@ -108,9 +110,10 @@ def test_import_sample_bundle(bundle_path: Path):
     except Exception as e:
         print(f"❌ Practitioners import failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
-    
+
     # Test 4: Import Encounters
     print("\n[4/6] Testing Encounters import...")
     try:
@@ -122,9 +125,10 @@ def test_import_sample_bundle(bundle_path: Path):
     except Exception as e:
         print(f"❌ Encounters import failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
-    
+
     # Test 5: Import Conditions
     print("\n[5/6] Testing Conditions import...")
     try:
@@ -136,9 +140,10 @@ def test_import_sample_bundle(bundle_path: Path):
     except Exception as e:
         print(f"❌ Conditions import failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
-    
+
     # Test 6: Import Observations
     print("\n[6/6] Testing Observations import...")
     try:
@@ -150,9 +155,10 @@ def test_import_sample_bundle(bundle_path: Path):
     except Exception as e:
         print(f"❌ Observations import failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
-    
+
     # Final counts
     db = SessionLocal()
     try:
@@ -164,29 +170,33 @@ def test_import_sample_bundle(bundle_path: Path):
             "conditions": db.query(ConditionV2).count(),
             "observations": db.query(ObservationV2).count(),
         }
-        
+
         print("\n" + "=" * 60)
         print("Final Results:")
         print("=" * 60)
         for key in final_counts:
             added = final_counts[key] - initial_counts[key]
-            print(f"  {key.capitalize()}: {initial_counts[key]} → {final_counts[key]} (+{added})")
-        
+            print(
+                f"  {key.capitalize()}: {initial_counts[key]} → {final_counts[key]} (+{added})"
+            )
+
         # Verify data integrity
         print("\n" + "=" * 60)
         print("Data Integrity Checks:")
         print("=" * 60)
-        
+
         # Check if patients have required fields
         patients = db.query(PatientV2).all()
         if patients:
             sample_patient = patients[0]
-            print(f"✓ Sample Patient: {sample_patient.first_name} {sample_patient.last_name}")
+            print(
+                f"✓ Sample Patient: {sample_patient.first_name} {sample_patient.last_name}"
+            )
             print(f"  - ID: {sample_patient.id}")
             print(f"  - Identifier: {sample_patient.identifier}")
             print(f"  - Birth Date: {sample_patient.birth_date}")
             print(f"  - Gender: {sample_patient.gender}")
-        
+
         # Check if encounters reference patients
         encounters = db.query(EncounterV2).all()
         if encounters:
@@ -196,18 +206,22 @@ def test_import_sample_bundle(bundle_path: Path):
             print(f"  - Patient ID: {sample_encounter.patient_id}")
             print(f"  - Status: {sample_encounter.status}")
             print(f"  - Start Time: {sample_encounter.start_time}")
-            
+
             # Verify foreign key relationship
             if sample_encounter.patient_id:
-                patient = db.query(PatientV2).filter(PatientV2.id == sample_encounter.patient_id).first()
+                patient = (
+                    db.query(PatientV2)
+                    .filter(PatientV2.id == sample_encounter.patient_id)
+                    .first()
+                )
                 if patient:
                     print(f"  - Patient exists: ✓")
                 else:
                     print(f"  - Patient exists: ❌ (Foreign key issue!)")
-        
+
     finally:
         db.close()
-    
+
     print("\n" + "=" * 60)
     print("✅ All import tests completed successfully!")
     print("=" * 60)
@@ -226,33 +240,34 @@ def main():
     """Main test function."""
     # Get sample bundle (we're already in project root)
     bundles_dir = Path("data") / "bundles"
-    
+
     # Find first bundle file
     bundle_files = list(bundles_dir.glob("*.json"))
     if not bundle_files:
         print("❌ No bundle files found in data/bundles/")
         return 1
-    
+
     sample_bundle = bundle_files[0]
     print(f"Using sample bundle: {sample_bundle.name}\n")
-    
+
     try:
         # Setup
         setup_test_db()
-        
+
         # Run tests
         success = test_import_sample_bundle(sample_bundle)
-        
+
         if success:
             print("\n✅ All tests passed!")
             return 0
         else:
             print("\n❌ Some tests failed. Check errors above.")
             return 1
-            
+
     except Exception as e:
         print(f"\n❌ Test script failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
     finally:
@@ -265,6 +280,5 @@ if __name__ == "__main__":
     script_dir = Path(__file__).parent
     project_root = script_dir.parent.parent.parent
     os.chdir(project_root)
-    
-    sys.exit(main())
 
+    sys.exit(main())
